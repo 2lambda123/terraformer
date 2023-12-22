@@ -5,12 +5,12 @@ go 1.13
 require (
 	cloud.google.com/go v0.36.0
 	github.com/Azure/azure-sdk-for-go v34.0.0+incompatible
-	github.com/Azure/go-autorest v13.0.2+incompatible
+	github.com/Azure/go-autorest v13.0.2+incompatible // indirect
 	github.com/Azure/go-autorest/autorest v0.9.1 // indirect
 	github.com/Azure/go-autorest/autorest/azure/auth v0.3.0
 	github.com/Azure/go-autorest/autorest/to v0.3.0 // indirect
 	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
-	github.com/aws/aws-sdk-go v1.22.0
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/cloudflare/cloudflare-go v0.9.4
 	github.com/coreos/go-systemd v0.0.0-20181031085051-9002847aa142 // indirect
 	github.com/dollarshaveclub/new-relic-synthetics-go v0.0.0-20170605224734-4dc3dd6ae884
@@ -39,13 +39,12 @@ require (
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/packer-community/winrmcp v0.0.0-20180921211025-c76d91c1e7db // indirect
 	github.com/paultyng/go-newrelic v3.1.0+incompatible
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3
 	github.com/terraform-providers/terraform-provider-openstack v1.18.0 // indirect
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/ugorji/go v1.1.2-0.20180728093225-eeb0478a81ae // indirect
-	github.com/unknwon/com v0.0.0-20181010210213-41959bdd855f // indirect
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca // indirect
 	github.com/zclconf/go-cty v1.0.1-0.20190708163926-19588f92a98f
 	github.com/zorkian/go-datadog-api v2.24.0+incompatible
