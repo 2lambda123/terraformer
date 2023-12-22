@@ -1,25 +1,25 @@
 resource "datadog_synthetics_test" "test_api_example" {
-  type = "api"
+  type    = "api"
   subtype = "http"
   request = {
     method = "GET"
-    url = "https://www.example.org"
+    url    = "https://www.example.org"
   }
   request_headers = {
-    Content-Type = "application/json"
+    Content-Type   = "application/json"
     Authentication = "Token: 1234566789"
   }
   assertion {
-    type = "statusCode"
+    type     = "statusCode"
     operator = "is"
-    target = "200"
+    target   = "200"
   }
-  locations = [ "aws:eu-central-1" ]
+  locations = ["aws:eu-central-1"]
   options_list {
     tick_every = 900
 
     retry {
-      count = 2
+      count    = 2
       interval = 300
     }
 
@@ -27,9 +27,9 @@ resource "datadog_synthetics_test" "test_api_example" {
       renotify_interval = 100
     }
   }
-  name = "An API test on example.org"
+  name    = "An API test on example.org"
   message = "Notify @pagerduty"
-  tags = ["foo:bar", "foo", "env:test"]
+  tags    = ["foo:bar", "foo", "env:test"]
 
   status = "live"
 }
