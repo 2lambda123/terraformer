@@ -15,10 +15,10 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"context"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 )
 
 var ElbAllowEmptyValues = []string{"tags."}
@@ -32,13 +32,20 @@ type ElbGenerator struct {
 // Need only ELB name as ID for terraform resource
 // AWS api support paging
 func (g *ElbGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := elb.New(sess)
-
-	err := svc.DescribeLoadBalancersPages(&elb.DescribeLoadBalancersInput{}, func(loadBalancers *elb.DescribeLoadBalancersOutput, lastPage bool) bool {
-		for _, loadBalancer := range loadBalancers.LoadBalancerDescriptions {
-			resourceName := aws.StringValue(loadBalancer.LoadBalancerName)
-			resource := terraform_utils.NewSimpleResource(
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := elasticloadbalancing.NewFromConfig(config)
+	p := elasticloadbalancing.NewDescribeLoadBalancersPaginator(svc, &elasticloadbalancing.DescribeLoadBalancersInput{})
+	for p.HasMorePages() {
+		page, e := p.NextPage(context.TODO())
+		if e != nil {
+			return e
+		}
+		for _, loadBalancer := range page.LoadBalancerDescriptions {
+			resourceName := StringValue(loadBalancer.LoadBalancerName)
+			resource := terraformutils.NewSimpleResource(
 				resourceName,
 				resourceName,
 				"aws_elb",
@@ -48,11 +55,6 @@ func (g *ElbGenerator) InitResources() error {
 			resource.IgnoreKeys = append(resource.IgnoreKeys, "^instances\\.(.*)") // don't import current connect instances to ELB
 			g.Resources = append(g.Resources, resource)
 		}
-		return !lastPage
-	})
-	if err != nil {
-		return err
 	}
 	return nil
-
 }

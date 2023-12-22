@@ -18,15 +18,14 @@ import (
 	"errors"
 	"os"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
-const herokuProviderVersion = "~> 2.2.1"
-
-type HerokuProvider struct {
-	terraform_utils.Provider
+type HerokuProvider struct { //nolint
+	terraformutils.Provider
 	email  string
 	apiKey string
+	team   string
 }
 
 func (p *HerokuProvider) Init(args []string) error {
@@ -40,6 +39,11 @@ func (p *HerokuProvider) Init(args []string) error {
 	}
 	p.apiKey = os.Getenv("HEROKU_API_KEY")
 
+	// optional
+	if os.Getenv("HEROKU_TEAM") != "" {
+		p.team = os.Getenv("HEROKU_TEAM")
+	}
+
 	return nil
 }
 
@@ -51,9 +55,7 @@ func (p *HerokuProvider) GetProviderData(arg ...string) map[string]interface{} {
 	return map[string]interface{}{
 		"provider": map[string]interface{}{
 			"heroku": map[string]interface{}{
-				"version": herokuProviderVersion,
-				"email":   p.email,
-				"api_key": p.apiKey,
+				"email": p.email,
 			},
 		},
 	}
@@ -63,8 +65,8 @@ func (HerokuProvider) GetResourceConnections() map[string]map[string][]string {
 	return map[string]map[string][]string{}
 }
 
-func (p *HerokuProvider) GetSupportedService() map[string]terraform_utils.ServiceGenerator {
-	return map[string]terraform_utils.ServiceGenerator{
+func (p *HerokuProvider) GetSupportedService() map[string]terraformutils.ServiceGenerator {
+	return map[string]terraformutils.ServiceGenerator{
 		"account_feature":        &AccountFeatureGenerator{},
 		"addon":                  &AddOnGenerator{},
 		"addon_attachment":       &AddOnAttachmentGenerator{},
@@ -73,27 +75,31 @@ func (p *HerokuProvider) GetSupportedService() map[string]terraform_utils.Servic
 		"app_feature":            &AppFeatureGenerator{},
 		"app_webhook":            &AppWebhookGenerator{},
 		"build":                  &BuildGenerator{},
+		"cert":                   &CertGenerator{},
 		"domain":                 &DomainGenerator{},
 		"drain":                  &DrainGenerator{},
 		"formation":              &FormationGenerator{},
 		"pipeline":               &PipelineGenerator{},
 		"pipeline_coupling":      &PipelineCouplingGenerator{},
+		"team_app":               &TeamAppGenerator{},
 		"team_collaborator":      &TeamCollaboratorGenerator{},
 		"team_member":            &TeamMemberGenerator{},
 	}
 }
 
-func (p *HerokuProvider) InitService(serviceName string) error {
+func (p *HerokuProvider) InitService(serviceName string, verbose bool) error {
 	var isSupported bool
 	if _, isSupported = p.GetSupportedService()[serviceName]; !isSupported {
 		return errors.New("heroku: " + serviceName + " not supported service")
 	}
 	p.Service = p.GetSupportedService()[serviceName]
 	p.Service.SetName(serviceName)
+	p.Service.SetVerbose(verbose)
 	p.Service.SetProviderName(p.GetName())
 	p.Service.SetArgs(map[string]interface{}{
 		"email":   p.email,
 		"api_key": p.apiKey,
+		"team":    p.team,
 	})
 	return nil
 }

@@ -21,7 +21,7 @@ import (
 
 	"google.golang.org/api/cloudkms/v1"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 var kmsAllowEmptyValues = []string{""}
@@ -32,17 +32,17 @@ type KmsGenerator struct {
 	GCPService
 }
 
-func (g KmsGenerator) createKmsRingResources(ctx context.Context, keyRingList *cloudkms.ProjectsLocationsKeyRingsListCall, kmsService *cloudkms.Service) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g KmsGenerator) createKmsRingResources(ctx context.Context, keyRingList *cloudkms.ProjectsLocationsKeyRingsListCall, kmsService *cloudkms.Service) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := keyRingList.Pages(ctx, func(page *cloudkms.ListKeyRingsResponse) error {
 		for _, obj := range page.KeyRings {
 			tm := strings.Split(obj.Name, "/")
 			ID := tm[1] + "/" + tm[3] + "/" + tm[5]
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				ID,
 				tm[len(tm)-3]+"_"+tm[len(tm)-1],
 				"google_kms_key_ring",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"project":  g.GetArgs()["project"].(string),
 					"location": tm[3],
@@ -55,22 +55,22 @@ func (g KmsGenerator) createKmsRingResources(ctx context.Context, keyRingList *c
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
 
-func (g *KmsGenerator) createKmsKeyResources(ctx context.Context, keyRingName string, kmsService *cloudkms.Service) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g *KmsGenerator) createKmsKeyResources(ctx context.Context, keyRingName string, kmsService *cloudkms.Service) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	keyList := kmsService.Projects.Locations.KeyRings.CryptoKeys.List(keyRingName)
 	if err := keyList.Pages(ctx, func(page *cloudkms.ListCryptoKeysResponse) error {
 		for _, key := range page.CryptoKeys {
 			tm := strings.Split(key.Name, "/")
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				key.Name,
 				tm[1]+"_"+tm[3]+"_"+tm[5]+"_"+tm[7],
 				"google_kms_crypto_key",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"project": g.GetArgs()["project"].(string),
 					"name":    key.Name,
@@ -81,7 +81,7 @@ func (g *KmsGenerator) createKmsKeyResources(ctx context.Context, keyRingName st
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
@@ -91,14 +91,13 @@ func (g *KmsGenerator) InitResources() error {
 	ctx := context.Background()
 	kmsService, err := cloudkms.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	keyRingList := kmsService.Projects.Locations.KeyRings.List("projects/" + g.GetArgs()["project"].(string) + "/locations/global")
 
 	g.Resources = g.createKmsRingResources(ctx, keyRingList, kmsService)
 	return nil
-
 }
 
 func (g *KmsGenerator) PostConvertHook() error {

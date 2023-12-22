@@ -15,13 +15,13 @@
 package kubernetes
 
 import (
+	"context"
 	"reflect"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/kubectl/pkg/pluginutils"
 )
 
 type Kind struct {
@@ -36,7 +36,7 @@ type Kind struct {
 // from each kubernetes object 1 TerraformResource.
 // Use UID as the resource IDs.
 func (k *Kind) InitResources() error {
-	config, _, err := pluginutils.InitClientAndConfig()
+	config, _, err := initClientAndConfig()
 	if err != nil {
 		return err
 	}
@@ -55,9 +55,10 @@ func (k *Kind) InitResources() error {
 	if k.Namespaced {
 		param = append(param, reflect.ValueOf(namespace))
 	}
+
 	resource := group.MethodByName(extractClientSetFuncTypeName(k.Name)).Call(param)[0]
 
-	results := resource.MethodByName("List").Call([]reflect.Value{
+	results := resource.MethodByName("List").Call([]reflect.Value{reflect.ValueOf(context.Background()),
 		reflect.ValueOf(metav1.ListOptions{})})
 
 	if !results[1].IsNil() {
@@ -79,7 +80,7 @@ func (k *Kind) InitResources() error {
 			name = item.FieldByName("Name").String()
 		}
 
-		k.Resources = append(k.Resources, terraform_utils.NewSimpleResource(
+		k.Resources = append(k.Resources, terraformutils.NewSimpleResource(
 			name,
 			name,
 			extractTfResourceName(k.Name),

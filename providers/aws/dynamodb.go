@@ -15,9 +15,10 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"context"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
 var dynamodbAllowEmptyValues = []string{"tags."}
@@ -27,24 +28,26 @@ type DynamoDbGenerator struct {
 }
 
 func (g *DynamoDbGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := dynamodb.New(sess)
-
-	err := svc.ListTablesPages(&dynamodb.ListTablesInput{}, func(tables *dynamodb.ListTablesOutput, lastPage bool) bool {
-		for _, tableName := range tables.TableNames {
-			g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
-				aws.StringValue(tableName),
-				aws.StringValue(tableName),
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := dynamodb.NewFromConfig(config)
+	p := dynamodb.NewListTablesPaginator(svc, &dynamodb.ListTablesInput{})
+	for p.HasMorePages() {
+		page, e := p.NextPage(context.TODO())
+		if e != nil {
+			return e
+		}
+		for _, tableName := range page.TableNames {
+			g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
+				tableName,
+				tableName,
 				"aws_dynamodb_table",
 				"aws",
 				dynamodbAllowEmptyValues,
 			))
 		}
-
-		return !lastPage
-	})
-	if err != nil {
-		return err
 	}
 	return nil
 }

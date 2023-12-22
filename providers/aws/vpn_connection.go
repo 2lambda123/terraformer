@@ -15,10 +15,11 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"context"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 )
 
 var VpnConnectionAllowEmptyValues = []string{"tags."}
@@ -27,12 +28,12 @@ type VpnConnectionGenerator struct {
 	AWSService
 }
 
-func (VpnConnectionGenerator) createResources(vpncs *ec2.DescribeVpnConnectionsOutput) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (VpnConnectionGenerator) createResources(vpncs *ec2.DescribeVpnConnectionsOutput) []terraformutils.Resource {
+	var resources []terraformutils.Resource
 	for _, vpnc := range vpncs.VpnConnections {
-		resources = append(resources, terraform_utils.NewSimpleResource(
-			aws.StringValue(vpnc.VpnConnectionId),
-			aws.StringValue(vpnc.VpnConnectionId),
+		resources = append(resources, terraformutils.NewSimpleResource(
+			StringValue(vpnc.VpnConnectionId),
+			StringValue(vpnc.VpnConnectionId),
 			"aws_vpn_connection",
 			"aws",
 			VpnConnectionAllowEmptyValues,
@@ -45,13 +46,15 @@ func (VpnConnectionGenerator) createResources(vpncs *ec2.DescribeVpnConnectionsO
 // from each vpn connection create 1 TerraformResource.
 // Need VpnConnectionId as ID for terraform resource
 func (g *VpnConnectionGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := ec2.New(sess)
-	vpncs, err := svc.DescribeVpnConnections(&ec2.DescribeVpnConnectionsInput{})
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := ec2.NewFromConfig(config)
+	vpncs, err := svc.DescribeVpnConnections(context.TODO(), &ec2.DescribeVpnConnectionsInput{})
 	if err != nil {
 		return err
 	}
 	g.Resources = g.createResources(vpncs)
 	return nil
-
 }

@@ -20,7 +20,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"google.golang.org/api/dns/v1"
 )
@@ -33,16 +33,16 @@ type CloudDNSGenerator struct {
 	GCPService
 }
 
-func (g CloudDNSGenerator) createZonesResources(ctx context.Context, svc *dns.Service, project string) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g CloudDNSGenerator) createZonesResources(ctx context.Context, svc *dns.Service, project string) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	managedZonesListCall := svc.ManagedZones.List(project)
 	err := managedZonesListCall.Pages(ctx, func(listDNS *dns.ManagedZonesListResponse) error {
 		for _, zone := range listDNS.ManagedZones {
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				zone.Name,
 				zone.Name,
 				"google_dns_managed_zone",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"name":    zone.Name,
 					"project": project,
@@ -57,20 +57,20 @@ func (g CloudDNSGenerator) createZonesResources(ctx context.Context, svc *dns.Se
 	})
 	if err != nil {
 		log.Println(err)
-		return []terraform_utils.Resource{}
+		return []terraformutils.Resource{}
 	}
 	return resources
 }
-func (CloudDNSGenerator) createRecordsResources(ctx context.Context, svc *dns.Service, project, zoneName string) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g CloudDNSGenerator) createRecordsResources(ctx context.Context, svc *dns.Service, project, zoneName string) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	managedRecordsListCall := svc.ResourceRecordSets.List(project, zoneName)
 	err := managedRecordsListCall.Pages(ctx, func(listDNS *dns.ResourceRecordSetsListResponse) error {
 		for _, record := range listDNS.Rrsets {
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				fmt.Sprintf("%s/%s/%s", zoneName, record.Name, record.Type),
 				zoneName+"_"+strings.TrimSuffix(record.Name+"-"+record.Type, "."),
 				"google_dns_record_set",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"name":         record.Name,
 					"managed_zone": zoneName,
@@ -85,7 +85,7 @@ func (CloudDNSGenerator) createRecordsResources(ctx context.Context, svc *dns.Se
 	})
 	if err != nil {
 		log.Println(err)
-		return []terraform_utils.Resource{}
+		return []terraformutils.Resource{}
 	}
 	return resources
 }
@@ -97,7 +97,7 @@ func (g *CloudDNSGenerator) InitResources() error {
 	ctx := context.Background()
 	svc, err := dns.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	g.Resources = g.createZonesResources(ctx, svc, project)
@@ -116,10 +116,10 @@ func (g *CloudDNSGenerator) PostConvertHook() error {
 				continue
 			}
 			if zoneID == resourceZone.InstanceState.ID {
-				g.Resources[i].Item["managed_zone"] = "${google_dns_managed_zone." + resourceZone.ResourceName + ".name}"
+				g.Resources[i].Item["managed_zone"] = "google_dns_managed_zone." + resourceZone.ResourceName + ".name"
 				name := g.Resources[i].Item["name"].(string)
-				name = strings.Replace(name, resourceZone.Item["dns_name"].(string), "", -1)
-				g.Resources[i].Item["name"] = name + "${google_dns_managed_zone." + resourceZone.ResourceName + ".dns_name}"
+				name = strings.ReplaceAll(name, resourceZone.Item["dns_name"].(string), "")
+				g.Resources[i].Item["name"] = name + "google_dns_managed_zone." + resourceZone.ResourceName + ".dns_name"
 			}
 		}
 	}

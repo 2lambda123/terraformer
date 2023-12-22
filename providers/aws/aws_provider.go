@@ -15,42 +15,43 @@
 package aws
 
 import (
-	"github.com/zclconf/go-cty/cty"
 	"os"
 	"strconv"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/pkg/errors"
+	"github.com/zclconf/go-cty/cty"
 )
 
-type AWSProvider struct {
-	terraform_utils.Provider
+type AWSProvider struct { //nolint
+	terraformutils.Provider
 	region  string
 	profile string
 }
 
-const awsProviderVersion = ">2.25.0"
+const GlobalRegion = "aws-global"
+const MainRegionPublicPartition = "us-east-1"
+const NoRegion = ""
+
+// SupportedGlobalResources should be bound to a default region. AWS doesn't specify in which region default services are
+// placed (see  https://docs.aws.amazon.com/general/latest/gr/rande.html), so we shouldn't assume any region as well
+var SupportedGlobalResources = []string{
+	"budgets",
+	"cloudfront",
+	"ecrpublic",
+	"iam",
+	"organization",
+	"route53",
+	"waf",
+}
+
+// SupportedEastOnlyResources should be bound to us-east-1 region only, and does not work in any other region.
+var SupportedEastOnlyResources = []string{
+	"wafv2_cloudfront",
+}
 
 func (p AWSProvider) GetResourceConnections() map[string]map[string][]string {
 	return map[string]map[string][]string{
-		"subnet":         {"vpc": []string{"vpc_id", "id"}},
-		"vpn_gateway":    {"vpc": []string{"vpc_id", "id"}},
-		"vpn_connection": {"vpn_gateway": []string{"vpn_gateway_id", "id"}},
-		"rds": {
-			"subnet": []string{"subnet_ids", "id"},
-			"sg":     []string{"vpc_security_group_ids", "id"},
-		},
-		"nacl": {
-			"subnet": []string{"subnet_ids", "id"},
-			"vpc":    []string{"vpc_id", "id"},
-		},
-		"igw": {"vpc": []string{"vpc_id", "id"}},
-		"elasticache": {
-			"vpc":    []string{"vpc_id", "id"},
-			"subnet": []string{"subnet_ids", "id"},
-			"sg":     []string{"security_group_ids", "id"},
-		},
 		"alb": {
 			"sg":     []string{"security_groups", "id"},
 			"subnet": []string{"subnets", "id"},
@@ -60,10 +61,6 @@ func (p AWSProvider) GetResourceConnections() map[string]map[string][]string {
 				// TF ALB TG attachment logic doesn't work well with references (doesn't interpolate)
 			},
 		},
-		"elb": {
-			"sg":     []string{"security_groups", "id"},
-			"subnet": []string{"subnets", "id"},
-		},
 		"auto_scaling": {
 			"sg":     []string{"security_groups", "id"},
 			"subnet": []string{"vpc_zone_identifier", "id"},
@@ -71,21 +68,37 @@ func (p AWSProvider) GetResourceConnections() map[string]map[string][]string {
 		"ec2_instance": {
 			"sg":     []string{"vpc_security_group_ids", "id"},
 			"subnet": []string{"subnet_id", "id"},
+			"ebs":    []string{"ebs_block_device", "id"},
 		},
-		"route_table": {
-			"vpc": []string{"vpc_id", "id"},
+		"elasticache": {
+			"vpc":    []string{"vpc_id", "id"},
+			"subnet": []string{"subnet_ids", "id"},
+			"sg":     []string{"security_group_ids", "id"},
 		},
 		"ebs": {
 			// TF EBS attachment logic doesn't work well with references (doesn't interpolate)
 		},
-		"sns": {
-			"sns": []string{"topic_arn", "id"},
-			"sqs": []string{"endpoint", "arn"},
-		},
 		"ecs": {
-			"ecs":    []string{"task_definition", "arn"},
+			// ECS is not able anymore to support references (doesn't interpolate)
 			"subnet": []string{"network_configuration.subnets", "id"},
 			"sg":     []string{"network_configuration.security_groups", "id"},
+		},
+		"eks": {
+			"subnet": []string{"vpc_config.subnet_ids", "id"},
+			"sg":     []string{"vpc_config.security_group_ids", "id"},
+		},
+		"elb": {
+			"sg":     []string{"security_groups", "id"},
+			"subnet": []string{"subnets", "id"},
+		},
+		"igw": {"vpc": []string{"vpc_id", "id"}},
+		"msk": {
+			"subnet": []string{"broker_node_group_info.client_subnets", "id"},
+			"sg":     []string{"broker_node_group_info.security_groups", "id"},
+		},
+		"nacl": {
+			"subnet": []string{"subnet_ids", "id"},
+			"vpc":    []string{"vpc_id", "id"},
 		},
 		"organization": {
 			"organization": []string{
@@ -94,18 +107,48 @@ func (p AWSProvider) GetResourceConnections() map[string]map[string][]string {
 				"target_id", "id",
 			},
 		},
-		"msk": {
-			"subnet": []string{"broker_node_group_info.client_subnets", "id"},
-			"sg":     []string{"broker_node_group_info.security_groups", "id"},
+		"rds": {
+			"subnet": []string{"subnet_ids", "id"},
+			"sg":     []string{"vpc_security_group_ids", "id"},
+		},
+		"route_table": {
+			"route_table": []string{"route_table_id", "id"},
+			"subnet":      []string{"subnet_id", "id"},
+			"vpc":         []string{"vpc_id", "id"},
+		},
+		"sns": {
+			"sns": []string{"topic_arn", "id"},
+			"sqs": []string{"endpoint", "arn"},
+		},
+		"sg": {
+			"sg": []string{
+				"egress.security_groups", "id",
+				"ingress.security_groups", "id",
+				"security_group_id", "id",
+				"source_security_group_id", "id",
+			},
+		},
+		"subnet": {"vpc": []string{"vpc_id", "id"}},
+		"transit_gateway": {
+			"vpc":             []string{"vpc_id", "id"},
+			"transit_gateway": []string{"transit_gateway_id", "id"},
+			"subnet":          []string{"subnet_ids", "id"},
+			"vpn_connection":  []string{"vpn_connection_id", "id"},
+		},
+		"vpn_gateway": {"vpc": []string{"vpc_id", "id"}},
+		"vpn_connection": {
+			"customer_gateway": []string{"customer_gateway_id", "id"},
+			"vpn_gateway":      []string{"vpn_gateway_id", "id"},
 		},
 	}
 }
-func (p AWSProvider) GetProviderData(arg ...string) map[string]interface{} {
-	awsConfig := map[string]interface{}{
-		"version": awsProviderVersion,
-	}
 
-	if p.region != "" {
+func (p AWSProvider) GetProviderData(arg ...string) map[string]interface{} {
+	awsConfig := map[string]interface{}{}
+
+	if p.region == GlobalRegion {
+		awsConfig["region"] = MainRegionPublicPartition // For TF to workaround terraform-providers/terraform-provider-aws#1043
+	} else if p.region != NoRegion {
 		awsConfig["region"] = p.region
 	}
 
@@ -117,8 +160,14 @@ func (p AWSProvider) GetProviderData(arg ...string) map[string]interface{} {
 }
 
 func (p *AWSProvider) GetConfig() cty.Value {
+	if p.region != GlobalRegion {
+		return cty.ObjectVal(map[string]cty.Value{
+			"region":                 cty.StringVal(p.region),
+			"skip_region_validation": cty.True,
+		})
+	}
 	return cty.ObjectVal(map[string]cty.Value{
-		"region": cty.StringVal(p.region),
+		"region":                 cty.StringVal(""),
 		"skip_region_validation": cty.True,
 	})
 }
@@ -135,7 +184,7 @@ func (p *AWSProvider) Init(args []string) error {
 	// Terraformer accepts region and profile configuration, so we must detect what env variables to adjust to make Go SDK rely on them. AWS_SDK_LOAD_CONFIG here must be checked to determine correct variable to set.
 	enableSharedConfig, _ := strconv.ParseBool(os.Getenv("AWS_SDK_LOAD_CONFIG"))
 	var err error
-	if p.region != "" {
+	if p.region != GlobalRegion && p.region != NoRegion {
 		if enableSharedConfig {
 			err = os.Setenv("AWS_DEFAULT_REGION", p.region)
 		} else {
@@ -163,57 +212,116 @@ func (p *AWSProvider) GetName() string {
 	return "aws"
 }
 
-func (p *AWSProvider) InitService(serviceName string) error {
+func (p *AWSProvider) InitService(serviceName string, verbose bool) error {
 	var isSupported bool
 	if _, isSupported = p.GetSupportedService()[serviceName]; !isSupported {
 		return errors.New("aws: " + serviceName + " not supported service")
 	}
 	p.Service = p.GetSupportedService()[serviceName]
 	p.Service.SetName(serviceName)
+	p.Service.SetVerbose(verbose)
 	p.Service.SetProviderName(p.GetName())
 	p.Service.SetArgs(map[string]interface{}{
-		"region":  p.region,
+		"region":                 p.region,
+		"profile":                p.profile,
 		"skip_region_validation": true,
 	})
 	return nil
 }
 
 // GetAWSSupportService return map of support service for AWS
-func (p *AWSProvider) GetSupportedService() map[string]terraform_utils.ServiceGenerator {
-	return map[string]terraform_utils.ServiceGenerator{
-		"vpc":            &VpcGenerator{},
-		"vpc_peering":    &VpcPeeringConnectionGenerator{},
-		"sg":             &SecurityGenerator{},
-		"subnet":         &SubnetGenerator{},
-		"igw":            &IgwGenerator{},
-		"nat":            &NatGatewayGenerator{},
-		"vpn_gateway":    &VpnGatewayGenerator{},
-		"nacl":           &NaclGenerator{},
-		"vpn_connection": &VpnConnectionGenerator{},
-		"s3":             &S3Generator{},
-		"elb":            &ElbGenerator{},
-		"iam":            &IamGenerator{},
-		"route53":        &Route53Generator{},
-		"auto_scaling":   &AutoScalingGenerator{},
-		"rds":            &RDSGenerator{},
-		"elasticache":    &ElastiCacheGenerator{},
-		"alb":            &AlbGenerator{},
-		"acm":            &ACMGenerator{},
-		"cloudfront":     &CloudFrontGenerator{},
-		"ec2_instance":   &Ec2Generator{},
-		"eip":            &ElasticIpGenerator{},
-		"firehose":       &FirehoseGenerator{},
-		"glue":           &GlueGenerator{},
-		"route_table":    &RouteTableGenerator{},
-		"ebs":            &EbsGenerator{},
-		"sqs":            &SqsGenerator{},
-		"sns":            &SnsGenerator{},
-		"ecs":            &EcsGenerator{},
-		"es":             &EsGenerator{},
-		"organization":   &OrganizationGenerator{},
-		"dynamodb":       &DynamoDbGenerator{},
-		"cloudtrail":     &CloudTrailGenerator{},
-		"kinesis":        &KinesisGenerator{},
-		"msk":            &MskGenerator{},
+func (p *AWSProvider) GetSupportedService() map[string]terraformutils.ServiceGenerator {
+	return map[string]terraformutils.ServiceGenerator{
+		"accessanalyzer":    &AwsFacade{service: &AccessAnalyzerGenerator{}},
+		"acm":               &AwsFacade{service: &ACMGenerator{}},
+		"alb":               &AwsFacade{service: &AlbGenerator{}},
+		"api_gateway":       &AwsFacade{service: &APIGatewayGenerator{}},
+		"appsync":           &AwsFacade{service: &AppSyncGenerator{}},
+		"auto_scaling":      &AwsFacade{service: &AutoScalingGenerator{}},
+		"batch":             &AwsFacade{service: &BatchGenerator{}},
+		"budgets":           &AwsFacade{service: &BudgetsGenerator{}},
+		"cloud9":            &AwsFacade{service: &Cloud9Generator{}},
+		"cloudformation":    &AwsFacade{service: &CloudFormationGenerator{}},
+		"cloudfront":        &AwsFacade{service: &CloudFrontGenerator{}},
+		"cloudhsm":          &AwsFacade{service: &CloudHsmGenerator{}},
+		"cloudtrail":        &AwsFacade{service: &CloudTrailGenerator{}},
+		"cloudwatch":        &AwsFacade{service: &CloudWatchGenerator{}},
+		"codebuild":         &AwsFacade{service: &CodeBuildGenerator{}},
+		"codecommit":        &AwsFacade{service: &CodeCommitGenerator{}},
+		"codedeploy":        &AwsFacade{service: &CodeDeployGenerator{}},
+		"codepipeline":      &AwsFacade{service: &CodePipelineGenerator{}},
+		"cognito":           &AwsFacade{service: &CognitoGenerator{}},
+		"config":            &AwsFacade{service: &ConfigGenerator{}},
+		"customer_gateway":  &AwsFacade{service: &CustomerGatewayGenerator{}},
+		"datapipeline":      &AwsFacade{service: &DataPipelineGenerator{}},
+		"devicefarm":        &AwsFacade{service: &DeviceFarmGenerator{}},
+		"docdb":             &AwsFacade{service: &DocDBGenerator{}},
+		"dynamodb":          &AwsFacade{service: &DynamoDbGenerator{}},
+		"ebs":               &AwsFacade{service: &EbsGenerator{}},
+		"ec2_instance":      &AwsFacade{service: &Ec2Generator{}},
+		"ecr":               &AwsFacade{service: &EcrGenerator{}},
+		"ecrpublic":         &AwsFacade{service: &EcrPublicGenerator{}},
+		"ecs":               &AwsFacade{service: &EcsGenerator{}},
+		"efs":               &AwsFacade{service: &EfsGenerator{}},
+		"eks":               &AwsFacade{service: &EksGenerator{}},
+		"eip":               &AwsFacade{service: &ElasticIPGenerator{}},
+		"elasticache":       &AwsFacade{service: &ElastiCacheGenerator{}},
+		"elastic_beanstalk": &AwsFacade{service: &BeanstalkGenerator{}},
+		"elb":               &AwsFacade{service: &ElbGenerator{}},
+		"emr":               &AwsFacade{service: &EmrGenerator{}},
+		"eni":               &AwsFacade{service: &EniGenerator{}},
+		"es":                &AwsFacade{service: &EsGenerator{}},
+		"firehose":          &AwsFacade{service: &FirehoseGenerator{}},
+		"glue":              &AwsFacade{service: &GlueGenerator{}},
+		"iam":               &AwsFacade{service: &IamGenerator{}},
+		"igw":               &AwsFacade{service: &IgwGenerator{}},
+		"iot":               &AwsFacade{service: &IotGenerator{}},
+		"kinesis":           &AwsFacade{service: &KinesisGenerator{}},
+		"kms":               &AwsFacade{service: &KmsGenerator{}},
+		"lambda":            &AwsFacade{service: &LambdaGenerator{}},
+		"logs":              &AwsFacade{service: &LogsGenerator{}},
+		"media_package":     &AwsFacade{service: &MediaPackageGenerator{}},
+		"media_store":       &AwsFacade{service: &MediaStoreGenerator{}},
+		"msk":               &AwsFacade{service: &MskGenerator{}},
+		"nacl":              &AwsFacade{service: &NaclGenerator{}},
+		"nat":               &AwsFacade{service: &NatGatewayGenerator{}},
+		"opsworks":          &AwsFacade{service: &OpsworksGenerator{}},
+		"organization":      &AwsFacade{service: &OrganizationGenerator{}},
+		"qldb":              &AwsFacade{service: &QLDBGenerator{}},
+		"rds":               &AwsFacade{service: &RDSGenerator{}},
+		"redshift":          &AwsFacade{service: &RedshiftGenerator{}},
+		"resourcegroups":    &AwsFacade{service: &ResourceGroupsGenerator{}},
+		"route53":           &AwsFacade{service: &Route53Generator{}},
+		"route_table":       &AwsFacade{service: &RouteTableGenerator{}},
+		"s3":                &AwsFacade{service: &S3Generator{}},
+		"secretsmanager":    &AwsFacade{service: &SecretsManagerGenerator{}},
+		"securityhub":       &AwsFacade{service: &SecurityhubGenerator{}},
+		"servicecatalog":    &AwsFacade{service: &ServiceCatalogGenerator{}},
+		"ses":               &AwsFacade{service: &SesGenerator{}},
+		"sfn":               &AwsFacade{service: &SfnGenerator{}},
+		"sg":                &AwsFacade{service: &SecurityGenerator{}},
+		"sqs":               &AwsFacade{service: &SqsGenerator{}},
+		"sns":               &AwsFacade{service: &SnsGenerator{}},
+		"ssm":               &AwsFacade{service: &SsmGenerator{}},
+		"subnet":            &AwsFacade{service: &SubnetGenerator{}},
+		"swf":               &AwsFacade{service: &SWFGenerator{}},
+		"transit_gateway":   &AwsFacade{service: &TransitGatewayGenerator{}},
+		"waf":               &AwsFacade{service: &WafGenerator{}},
+		"waf_regional":      &AwsFacade{service: &WafRegionalGenerator{}},
+		"wafv2_cloudfront":  &AwsFacade{service: NewWafv2CloudfrontGenerator()},
+		"wafv2_regional":    &AwsFacade{service: NewWafv2RegionalGenerator()},
+		"vpc":               &AwsFacade{service: &VpcGenerator{}},
+		"vpc_peering":       &AwsFacade{service: &VpcPeeringConnectionGenerator{}},
+		"vpn_connection":    &AwsFacade{service: &VpnConnectionGenerator{}},
+		"vpn_gateway":       &AwsFacade{service: &VpnGatewayGenerator{}},
+		"workspaces":        &AwsFacade{service: &WorkspacesGenerator{}},
+		"xray":              &AwsFacade{service: &XrayGenerator{}},
 	}
+}
+
+func StringValue(value *string) string {
+	if value != nil {
+		return *value
+	}
+	return ""
 }

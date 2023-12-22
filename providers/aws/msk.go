@@ -15,9 +15,10 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kafka"
+	"context"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/aws/aws-sdk-go-v2/service/kafka"
 )
 
 var mskAllowEmptyValues = []string{"tags."}
@@ -27,23 +28,26 @@ type MskGenerator struct {
 }
 
 func (g *MskGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := kafka.New(sess)
-
-	err := svc.ListClustersPages(&kafka.ListClustersInput{}, func(clusters *kafka.ListClustersOutput, lastPage bool) bool {
-		for _, clusterInfo := range clusters.ClusterInfoList {
-			g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
-				aws.StringValue(clusterInfo.ClusterArn),
-				aws.StringValue(clusterInfo.ClusterName),
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := kafka.NewFromConfig(config)
+	p := kafka.NewListClustersPaginator(svc, &kafka.ListClustersInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		for _, clusterInfo := range page.ClusterInfoList {
+			g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
+				StringValue(clusterInfo.ClusterArn),
+				StringValue(clusterInfo.ClusterName),
 				"aws_msk_cluster",
 				"aws",
 				mskAllowEmptyValues,
 			))
 		}
-		return !lastPage
-	})
-	if err != nil {
-		return err
 	}
 
 	return nil

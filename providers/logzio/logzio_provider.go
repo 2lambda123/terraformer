@@ -15,26 +15,23 @@
 package logzio
 
 import (
-	"github.com/zclconf/go-cty/cty"
 	"regexp"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/pkg/errors"
+	"github.com/zclconf/go-cty/cty"
 )
 
-type LogzioProvider struct {
-	terraform_utils.Provider
-	token   string
-	baseURL string
+type LogzioProvider struct { //nolint
+	terraformutils.Provider
+	apiToken string
+	baseURL  string
 }
 
 var (
 	disallowedChars = regexp.MustCompile(`[^A-Za-z0-9-]`)
 )
-
-const logzioProviderVersion = "~>v1.1.1"
 
 func (p LogzioProvider) GetResourceConnections() map[string]map[string][]string {
 	return map[string]map[string][]string{
@@ -43,25 +40,19 @@ func (p LogzioProvider) GetResourceConnections() map[string]map[string][]string 
 }
 
 func (p LogzioProvider) GetProviderData(arg ...string) map[string]interface{} {
-	return map[string]interface{}{
-		"provider": map[string]interface{}{
-			"logzio": map[string]interface{}{
-				"version": logzioProviderVersion,
-			},
-		},
-	}
+	return map[string]interface{}{}
 }
 
 func (p *LogzioProvider) GetConfig() cty.Value {
 	return cty.ObjectVal(map[string]cty.Value{
-		"token":   cty.StringVal(p.token),
-		"baseURL": cty.StringVal(p.baseURL),
+		"api_token": cty.StringVal(p.apiToken),
+		"base_url":  cty.StringVal(p.baseURL),
 	})
 }
 
-// Init LogzioProvider with API token
+// Init LogzioProvider with API apiToken
 func (p *LogzioProvider) Init(args []string) error {
-	p.token = args[0]
+	p.apiToken = args[0]
 	p.baseURL = args[1]
 	return nil
 }
@@ -70,24 +61,25 @@ func (p *LogzioProvider) GetName() string {
 	return "logzio"
 }
 
-func (p *LogzioProvider) InitService(serviceName string) error {
+func (p *LogzioProvider) InitService(serviceName string, verbose bool) error {
 	var isSupported bool
 	if _, isSupported = p.GetSupportedService()[serviceName]; !isSupported {
 		return errors.New(p.GetName() + ": " + serviceName + " not supported service")
 	}
 	p.Service = p.GetSupportedService()[serviceName]
 	p.Service.SetName(serviceName)
+	p.Service.SetVerbose(verbose)
 	p.Service.SetProviderName(p.GetName())
 	p.Service.SetArgs(map[string]interface{}{
-		"token":   p.token,
-		"baseURL": p.baseURL,
+		"api_token": p.apiToken,
+		"base_url":  p.baseURL,
 	})
 	return nil
 }
 
 // GetSupportedService return map of support service for Logzio
-func (p *LogzioProvider) GetSupportedService() map[string]terraform_utils.ServiceGenerator {
-	return map[string]terraform_utils.ServiceGenerator{
+func (p *LogzioProvider) GetSupportedService() map[string]terraformutils.ServiceGenerator {
+	return map[string]terraformutils.ServiceGenerator{
 		"alerts":                       &AlertsGenerator{},
 		"alert_notification_endpoints": &AlertNotificationEndpointsGenerator{},
 	}

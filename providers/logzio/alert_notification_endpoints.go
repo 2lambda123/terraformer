@@ -17,7 +17,7 @@ package logzio
 import (
 	"strconv"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"github.com/jonboydell/logzio_client/endpoints"
 )
@@ -29,14 +29,14 @@ type AlertNotificationEndpointsGenerator struct {
 // Generate Terraform Resources from Logzio API,
 func (g *AlertNotificationEndpointsGenerator) InitResources() error {
 	var client *endpoints.EndpointsClient
-	client, _ = endpoints.New(g.Args["token"].(string), g.Args["baseURL"].(string))
+	client, _ = endpoints.New(g.Args["api_token"].(string), g.Args["base_url"].(string))
 
 	endpoints, err := client.ListEndpoints()
 	if err != nil {
 		return err
 	}
 	for _, endpoint := range endpoints {
-		g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
+		g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
 			strconv.FormatInt(endpoint.Id, 10),
 			createSlug(endpoint.Title+"-"+string(endpoint.EndpointType)+"-"+strconv.FormatInt(endpoint.Id, 10)),
 			"logzio_endpoint",

@@ -17,13 +17,11 @@ package cloudflare
 import (
 	"errors"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
-const cloudflareProviderVersion = "~> 1.16"
-
-type CloudflareProvider struct {
-	terraform_utils.Provider
+type CloudflareProvider struct { //nolint
+	terraformutils.Provider
 }
 
 func (p *CloudflareProvider) Init(args []string) error {
@@ -35,34 +33,31 @@ func (p *CloudflareProvider) GetName() string {
 }
 
 func (p *CloudflareProvider) GetProviderData(arg ...string) map[string]interface{} {
-	return map[string]interface{}{
-		"provider": map[string]interface{}{
-			"cloudflare": map[string]interface{}{
-				"version": cloudflareProviderVersion,
-			},
-		},
-	}
+	return map[string]interface{}{}
 }
 
 func (CloudflareProvider) GetResourceConnections() map[string]map[string][]string {
 	return map[string]map[string][]string{}
 }
 
-func (p *CloudflareProvider) GetSupportedService() map[string]terraform_utils.ServiceGenerator {
-	return map[string]terraform_utils.ServiceGenerator{
-		"dns":      &DNSGenerator{},
-		"firewall": &FirewallGenerator{},
-		"access":   &AccessGenerator{},
+func (p *CloudflareProvider) GetSupportedService() map[string]terraformutils.ServiceGenerator {
+	return map[string]terraformutils.ServiceGenerator{
+		"access":         &AccessGenerator{},
+		"dns":            &DNSGenerator{},
+		"firewall":       &FirewallGenerator{},
+		"page_rule":      &PageRulesGenerator{},
+		"account_member": &AccountMemberGenerator{},
 	}
 }
 
-func (p *CloudflareProvider) InitService(serviceName string) error {
+func (p *CloudflareProvider) InitService(serviceName string, verbose bool) error {
 	var isSupported bool
 	if _, isSupported = p.GetSupportedService()[serviceName]; !isSupported {
 		return errors.New("cloudflare: " + serviceName + " not supported service")
 	}
 	p.Service = p.GetSupportedService()[serviceName]
 	p.Service.SetName(serviceName)
+	p.Service.SetVerbose(verbose)
 	p.Service.SetProviderName(p.GetName())
 
 	return nil

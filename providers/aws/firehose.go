@@ -15,20 +15,21 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/firehose"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/aws/aws-sdk-go-v2/service/firehose"
 )
 
 type FirehoseGenerator struct {
 	AWSService
 }
 
-func (g FirehoseGenerator) createResources(streamNames []*string) []terraform_utils.Resource {
-	var resources []terraform_utils.Resource
-	for _, streamName := range streamNames {
-		resourceName := aws.StringValue(streamName)
-		resources = append(resources, terraform_utils.NewResource(
+func (g *FirehoseGenerator) createResources(streamNames []string) []terraformutils.Resource {
+	var resources []terraformutils.Resource
+	for _, resourceName := range streamNames {
+		resources = append(resources, terraformutils.NewResource(
 			resourceName,
 			resourceName,
 			"aws_kinesis_firehose_delivery_stream",
@@ -43,18 +44,27 @@ func (g FirehoseGenerator) createResources(streamNames []*string) []terraform_ut
 // Generate TerraformResources from AWS API,
 // Need deliver stream name for terraform resource
 func (g *FirehoseGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := firehose.New(sess)
-	var streamNames []*string
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := firehose.NewFromConfig(config)
+	var streamNames []string
+	var lastStreamName *string
 	for {
-		output, err := svc.ListDeliveryStreams(&firehose.ListDeliveryStreamsInput{})
+		output, err := svc.ListDeliveryStreams(context.TODO(), &firehose.ListDeliveryStreamsInput{
+			ExclusiveStartDeliveryStreamName: lastStreamName,
+			Limit:                            aws.Int32(100),
+		})
 		if err != nil {
 			return err
 		}
 		streamNames = append(streamNames, output.DeliveryStreamNames...)
-		if *output.HasMoreDeliveryStreams == false {
+		if !*output.HasMoreDeliveryStreams {
 			break
 		}
+
+		lastStreamName = aws.String(streamNames[len(streamNames)-1])
 	}
 
 	g.Resources = g.createResources(streamNames)

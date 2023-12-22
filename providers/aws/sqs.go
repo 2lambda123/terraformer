@@ -15,11 +15,15 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	"github.com/aws/aws-sdk-go/aws"
+	"context"
+	"fmt"
+	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/aws/aws-sdk-go-v2/aws"
+
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
 var sqsAllowEmptyValues = []string{"tags."}
@@ -29,21 +33,31 @@ type SqsGenerator struct {
 }
 
 func (g *SqsGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := sqs.New(sess)
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := sqs.NewFromConfig(config)
 
-	queuesList, err := svc.ListQueues(&sqs.ListQueuesInput{})
+	listQueuesInput := sqs.ListQueuesInput{}
+
+	sqsPrefix, hasPrefix := os.LookupEnv("SQS_PREFIX")
+	if hasPrefix {
+		listQueuesInput.QueueNamePrefix = aws.String(sqsPrefix)
+	}
+
+	queuesList, err := svc.ListQueues(context.TODO(), &listQueuesInput)
 
 	if err != nil {
 		return err
 	}
 
-	for _, queueUrl := range queuesList.QueueUrls {
-		urlParts := strings.Split(aws.StringValue(queueUrl), "/")
+	for _, queueURL := range queuesList.QueueUrls {
+		urlParts := strings.Split(queueURL, "/")
 		queueName := urlParts[len(urlParts)-1]
 
-		g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
-			aws.StringValue(queueUrl),
+		g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
+			queueURL,
 			queueName,
 			"aws_sqs_queue",
 			"aws",
@@ -51,5 +65,20 @@ func (g *SqsGenerator) InitResources() error {
 		))
 	}
 
+	return nil
+}
+
+// PostConvertHook for add policy json as heredoc
+func (g *SqsGenerator) PostConvertHook() error {
+	for i, resource := range g.Resources {
+		if resource.InstanceInfo.Type == "aws_sqs_queue" {
+			if val, ok := g.Resources[i].Item["policy"]; ok {
+				policy := g.escapeAwsInterpolation(val.(string))
+				g.Resources[i].Item["policy"] = fmt.Sprintf(`<<POLICY
+%s
+POLICY`, policy)
+			}
+		}
+	}
 	return nil
 }

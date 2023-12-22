@@ -15,13 +15,14 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"context"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 var AsgAllowEmptyValues = []string{"tags."}
@@ -30,11 +31,16 @@ type AutoScalingGenerator struct {
 	AWSService
 }
 
-func (g *AutoScalingGenerator) loadAutoScalingGroups(svc *autoscaling.AutoScaling) error {
-	err := svc.DescribeAutoScalingGroupsPages(&autoscaling.DescribeAutoScalingGroupsInput{}, func(asgs *autoscaling.DescribeAutoScalingGroupsOutput, lastPage bool) bool {
-		for _, asg := range asgs.AutoScalingGroups {
-			resourceName := aws.StringValue(asg.AutoScalingGroupName)
-			g.Resources = append(g.Resources, terraform_utils.NewResource(
+func (g *AutoScalingGenerator) loadAutoScalingGroups(svc *autoscaling.Client) error {
+	p := autoscaling.NewDescribeAutoScalingGroupsPaginator(svc, &autoscaling.DescribeAutoScalingGroupsInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		for _, asg := range page.AutoScalingGroups {
+			resourceName := StringValue(asg.AutoScalingGroupName)
+			g.Resources = append(g.Resources, terraformutils.NewResource(
 				resourceName,
 				resourceName,
 				"aws_autoscaling_group",
@@ -48,21 +54,25 @@ func (g *AutoScalingGenerator) loadAutoScalingGroups(svc *autoscaling.AutoScalin
 				map[string]interface{}{},
 			))
 		}
-		return !lastPage
-	})
-	return err
+	}
+	return nil
 }
 
-func (g *AutoScalingGenerator) loadLaunchConfigurations(svc *autoscaling.AutoScaling) error {
-	err := svc.DescribeLaunchConfigurationsPages(&autoscaling.DescribeLaunchConfigurationsInput{}, func(lcs *autoscaling.DescribeLaunchConfigurationsOutput, lastPage bool) bool {
-		for _, lc := range lcs.LaunchConfigurations {
-			resourceName := aws.StringValue(lc.LaunchConfigurationName)
+func (g *AutoScalingGenerator) loadLaunchConfigurations(svc *autoscaling.Client) error {
+	p := autoscaling.NewDescribeLaunchConfigurationsPaginator(svc, &autoscaling.DescribeLaunchConfigurationsInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		for _, lc := range page.LaunchConfigurations {
+			resourceName := StringValue(lc.LaunchConfigurationName)
 			attributes := map[string]string{}
 			// only for LaunchConfigurations with userdata, we want get user_data_base64
-			if aws.StringValue(lc.UserData) != "" {
-				attributes["user_data_base64"] = "=" //need set not empty string to get user_data_base64 from provider
+			if StringValue(lc.UserData) != "" {
+				attributes["user_data_base64"] = "=" // need set not empty string to get user_data_base64 from provider
 			}
-			g.Resources = append(g.Resources, terraform_utils.NewResource(
+			g.Resources = append(g.Resources, terraformutils.NewResource(
 				resourceName,
 				resourceName,
 				"aws_launch_configuration",
@@ -72,37 +82,30 @@ func (g *AutoScalingGenerator) loadLaunchConfigurations(svc *autoscaling.AutoSca
 				map[string]interface{}{},
 			))
 		}
-		return !lastPage
-	})
-	return err
+	}
+	return nil
 }
 
-func (g *AutoScalingGenerator) loadLaunchTemplates(sess *session.Session) error {
-	ec2svc := ec2.New(sess)
-	firstRun := true
-	var err error
-	launchTemplatesOutput := &ec2.DescribeLaunchTemplatesOutput{}
-	for {
-		if firstRun || launchTemplatesOutput.NextToken != nil {
-			firstRun = false
-			launchTemplatesOutput, err = ec2svc.DescribeLaunchTemplates(&ec2.DescribeLaunchTemplatesInput{
-				MaxResults: aws.Int64(maxResults),
-				NextToken:  launchTemplatesOutput.NextToken,
-			})
-			for _, lt := range launchTemplatesOutput.LaunchTemplates {
-				g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
-					aws.StringValue(lt.LaunchTemplateId),
-					aws.StringValue(lt.LaunchTemplateName),
-					"aws_launch_template",
-					"aws",
-					AsgAllowEmptyValues,
-				))
-			}
-		} else {
-			break
+func (g *AutoScalingGenerator) loadLaunchTemplates(config aws.Config) error {
+	ec2svc := ec2.NewFromConfig(config)
+
+	p := ec2.NewDescribeLaunchTemplatesPaginator(ec2svc, &ec2.DescribeLaunchTemplatesInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		for _, lt := range page.LaunchTemplates {
+			g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
+				StringValue(lt.LaunchTemplateId),
+				StringValue(lt.LaunchTemplateName),
+				"aws_launch_template",
+				"aws",
+				AsgAllowEmptyValues,
+			))
 		}
 	}
-	return err
+	return nil
 }
 
 // Generate TerraformResources from AWS API,
@@ -110,15 +113,18 @@ func (g *AutoScalingGenerator) loadLaunchTemplates(sess *session.Session) error 
 // Need only ASG name as ID for terraform resource
 // AWS api support paging
 func (g *AutoScalingGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := autoscaling.New(sess)
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := autoscaling.NewFromConfig(config)
 	if err := g.loadAutoScalingGroups(svc); err != nil {
 		return err
 	}
 	if err := g.loadLaunchConfigurations(svc); err != nil {
 		return err
 	}
-	if err := g.loadLaunchTemplates(sess); err != nil {
+	if err := g.loadLaunchTemplates(config); err != nil {
 		return err
 	}
 	return nil
@@ -144,7 +150,7 @@ func (g *AutoScalingGenerator) PostConvertHook() error {
 	}
 	// TODO fix tfVar value
 	/*
-		templateFiles := []terraform_utils.Resource{}
+		templateFiles := []terraformutils.Resource{}
 		for i, r := range g.Resources {
 			if r.InstanceInfo.Type != "aws_launch_configuration" {
 				continue
@@ -154,14 +160,14 @@ func (g *AutoScalingGenerator) PostConvertHook() error {
 				if err != nil {
 					continue
 				}
-				fileName := "userdata-" + r.ResourceName + ".txt"
+				fileName := "userdata-" + r.ServiceName + ".txt"
 				err = ioutil.WriteFile(fileName, userData, os.ModePerm) // TODO write files in tf file path
 				if err != nil {
 					continue
 				}
-				userDataFile := terraform_utils.NewResource(
-					r.ResourceName+"_userdata",
-					r.ResourceName+"_userdata",
+				userDataFile := terraformutils.NewResource(
+					r.ServiceName+"_userdata",
+					r.ServiceName+"_userdata",
 					"template_file",
 					"",
 					map[string]string{},
@@ -174,7 +180,7 @@ func (g *AutoScalingGenerator) PostConvertHook() error {
 				}
 
 				delete(g.Resources[i].Item, "user_data_base64")
-				g.Resources[i].Item["user_data"] = "${template_file." + userDataFile.ResourceName + ".rendered}"
+				g.Resources[i].Item["user_data"] = "${template_file." + userDataFile.ServiceName + ".rendered}"
 				templateFiles = append(templateFiles, userDataFile)
 			}
 		}

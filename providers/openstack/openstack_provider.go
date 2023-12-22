@@ -17,17 +17,14 @@ package openstack
 import (
 	"os"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/pkg/errors"
 )
 
-type OpenStackProvider struct {
-	terraform_utils.Provider
+type OpenStackProvider struct { //nolint
+	terraformutils.Provider
 	region string
 }
-
-const openStackProviderVersion = "~>1.21.1"
 
 func (p OpenStackProvider) GetResourceConnections() map[string]map[string][]string {
 	return map[string]map[string][]string{}
@@ -37,8 +34,7 @@ func (p OpenStackProvider) GetProviderData(arg ...string) map[string]interface{}
 	return map[string]interface{}{
 		"provider": map[string]interface{}{
 			"openstack": map[string]interface{}{
-				"version": openStackProviderVersion,
-				"region":  p.region,
+				"region": p.region,
 			},
 		},
 	}
@@ -59,13 +55,14 @@ func (p *OpenStackProvider) GetName() string {
 	return "openstack"
 }
 
-func (p *OpenStackProvider) InitService(serviceName string) error {
+func (p *OpenStackProvider) InitService(serviceName string, verbose bool) error {
 	var isSupported bool
 	if _, isSupported = p.GetSupportedService()[serviceName]; !isSupported {
 		return errors.New("openstack: " + serviceName + " not supported service")
 	}
 	p.Service = p.GetSupportedService()[serviceName]
 	p.Service.SetName(serviceName)
+	p.Service.SetVerbose(verbose)
 	p.Service.SetProviderName(p.GetName())
 	p.Service.SetArgs(map[string]interface{}{
 		"region": p.region,
@@ -74,10 +71,10 @@ func (p *OpenStackProvider) InitService(serviceName string) error {
 }
 
 // GetOpenStackSupportService return map of support service for OpenStack
-func (p *OpenStackProvider) GetSupportedService() map[string]terraform_utils.ServiceGenerator {
-	return map[string]terraform_utils.ServiceGenerator{
+func (p *OpenStackProvider) GetSupportedService() map[string]terraformutils.ServiceGenerator {
+	return map[string]terraformutils.ServiceGenerator{
+		"blockstorage": &BlockStorageGenerator{},
 		"compute":      &ComputeGenerator{},
 		"networking":   &NetworkingGenerator{},
-		"blockstorage": &BlockStorageGenerator{},
 	}
 }

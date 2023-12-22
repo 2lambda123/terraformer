@@ -18,11 +18,11 @@ import (
 	"context"
 	"log"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"google.golang.org/api/iterator"
 
-	"cloud.google.com/go/monitoring/apiv3"
+	monitoring "cloud.google.com/go/monitoring/apiv3" // nolint
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 )
 
@@ -35,7 +35,6 @@ type MonitoringGenerator struct {
 }
 
 func (g *MonitoringGenerator) loadAlerts(ctx context.Context, project string) error {
-
 	client, err := monitoring.NewAlertPolicyClient(ctx)
 	if err != nil {
 		return err
@@ -56,11 +55,11 @@ func (g *MonitoringGenerator) loadAlerts(ctx context.Context, project string) er
 			log.Println("error with alert:", err)
 			continue
 		}
-		g.Resources = append(g.Resources, terraform_utils.NewResource(
+		g.Resources = append(g.Resources, terraformutils.NewResource(
 			alert.Name,
 			alert.Name,
 			"google_monitoring_alert_policy",
-			"google",
+			g.ProviderName,
 			map[string]string{
 				"name":    alert.Name,
 				"project": project,
@@ -92,11 +91,11 @@ func (g *MonitoringGenerator) loadGroups(ctx context.Context, project string) er
 			log.Println("error with group:", err)
 			continue
 		}
-		g.Resources = append(g.Resources, terraform_utils.NewResource(
+		g.Resources = append(g.Resources, terraformutils.NewResource(
 			group.Name,
 			group.Name,
 			"google_monitoring_group",
-			"google",
+			g.ProviderName,
 			map[string]string{
 				"name":    group.Name,
 				"project": project,
@@ -128,11 +127,11 @@ func (g *MonitoringGenerator) loadNotificationChannel(ctx context.Context, proje
 			log.Println("error with notification Channel:", err)
 			continue
 		}
-		g.Resources = append(g.Resources, terraform_utils.NewResource(
+		g.Resources = append(g.Resources, terraformutils.NewResource(
 			notificationChannel.Name,
 			notificationChannel.Name,
 			"google_monitoring_notification_channel",
-			"google",
+			g.ProviderName,
 			map[string]string{
 				"name":    notificationChannel.Name,
 				"project": project,
@@ -163,11 +162,11 @@ func (g *MonitoringGenerator) loadUptimeCheck(ctx context.Context, project strin
 			log.Println("error with uptimeCheckConfigs:", err)
 			continue
 		}
-		g.Resources = append(g.Resources, terraform_utils.NewResource(
+		g.Resources = append(g.Resources, terraformutils.NewResource(
 			uptimeCheckConfigs.Name,
 			uptimeCheckConfigs.Name,
 			"google_monitoring_uptime_check_config",
-			"google",
+			g.ProviderName,
 			map[string]string{
 				"name":    uptimeCheckConfigs.Name,
 				"project": project,

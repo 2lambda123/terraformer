@@ -19,7 +19,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"google.golang.org/api/compute/v1"
 )
@@ -33,15 +33,15 @@ type InterconnectAttachmentsGenerator struct {
 }
 
 // Run on interconnectAttachmentsList and create for each TerraformResource
-func (g InterconnectAttachmentsGenerator) createResources(ctx context.Context, interconnectAttachmentsList *compute.InterconnectAttachmentsListCall) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g InterconnectAttachmentsGenerator) createResources(ctx context.Context, interconnectAttachmentsList *compute.InterconnectAttachmentsListCall) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := interconnectAttachmentsList.Pages(ctx, func(page *compute.InterconnectAttachmentList) error {
 		for _, obj := range page.Items {
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				obj.Name,
 				obj.Name,
 				"google_compute_interconnect_attachment",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"name":    obj.Name,
 					"project": g.GetArgs()["project"].(string),
@@ -53,7 +53,7 @@ func (g InterconnectAttachmentsGenerator) createResources(ctx context.Context, i
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
@@ -65,7 +65,7 @@ func (g *InterconnectAttachmentsGenerator) InitResources() error {
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	interconnectAttachmentsList := computeService.InterconnectAttachments.List(g.GetArgs()["project"].(string), g.GetArgs()["region"].(compute.Region).Name)

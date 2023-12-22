@@ -20,9 +20,9 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
-	"google.golang.org/api/container/v1beta1"
+	container "google.golang.org/api/container/v1beta1"
 )
 
 var GkeAllowEmptyValues = []string{"labels."}
@@ -33,21 +33,22 @@ type GkeGenerator struct {
 	GCPService
 }
 
-func (g *GkeGenerator) initClusters(clusters *container.ListClustersResponse, service *container.Service) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g *GkeGenerator) initClusters(clusters *container.ListClustersResponse) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	for _, cluster := range clusters.Clusters {
 		if _, exist := cluster.ResourceLabels["goog-composer-environment"]; exist { // don't manage composer clusters
 			continue
 		}
-		resource := terraform_utils.NewResource(
+		resource := terraformutils.NewResource(
 			cluster.Name,
 			cluster.Name,
 			"google_container_cluster",
-			"google",
+			g.ProviderName,
 			map[string]string{
-				"name":    cluster.Name, // provider need cluster name as Required
-				"project": g.GetArgs()["project"].(string),
-				"zone":    cluster.Zone, // provider need zone as Required
+				"name":     cluster.Name, // provider need cluster name as Required
+				"project":  g.GetArgs()["project"].(string),
+				"location": cluster.Location,
+				"zone":     cluster.Zone,
 			},
 			GkeAllowEmptyValues,
 			GkeAdditionalFields,
@@ -60,26 +61,27 @@ func (g *GkeGenerator) initClusters(clusters *container.ListClustersResponse, se
 			"^node_config\\.(.*)", // delete node_config config from google_container_cluster
 			"^ip_allocation_policy\\.[0-9]\\.cluster_secondary_range_name$",  // conflict with cluster_ipv4_cidr_block
 			"^ip_allocation_policy\\.[0-9]\\.services_secondary_range_name$", // conflict with services_ipv4_cidr_block
-			"^ip_allocation_policy\\.[0-9]\\.create_subnetwork")              //only for create new cluster conflict with others ip_allocation_policy fields
+			"^ip_allocation_policy\\.[0-9]\\.create_subnetwork")              // only for create new cluster conflict with others ip_allocation_policy fields
 		resources = append(resources, resource)
-		resources = append(resources, g.initNodePools(cluster.NodePools, cluster.Name, cluster.Location, cluster.Zone)...)
+		resources = append(resources, g.initNodePools(cluster.NodePools, cluster.Name, cluster.Location)...)
 	}
 	return resources
 }
 
-func (g *GkeGenerator) initNodePools(nodePools []*container.NodePool, clusterName, location, zone string) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g *GkeGenerator) initNodePools(nodePools []*container.NodePool, clusterName, location string) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	for _, nodePool := range nodePools {
-		resources = append(resources, terraform_utils.NewResource(
+		resources = append(resources, terraformutils.NewResource(
 			fmt.Sprintf("%s/%s/%s", location, clusterName, nodePool.Name),
 			clusterName+"_"+nodePool.Name,
 			"google_container_node_pool",
-			"google",
+			g.ProviderName,
 			map[string]string{
-				"zone":    location,
-				"project": g.GetArgs()["project"].(string),
-				"cluster": clusterName, // provider need cluster name as Required
-				"name":    nodePool.Name,
+				"location": location,
+				"zone":     location,
+				"project":  g.GetArgs()["project"].(string),
+				"cluster":  clusterName, // provider need cluster name as Required
+				"name":     nodePool.Name,
 			},
 			GkeAllowEmptyValues,
 			GkeAdditionalFields,
@@ -104,7 +106,7 @@ func (g *GkeGenerator) InitResources() error {
 		return err
 	}
 
-	g.Resources = g.initClusters(clusters, service)
+	g.Resources = g.initClusters(clusters)
 	return nil
 }
 
@@ -126,7 +128,7 @@ func (g *GkeGenerator) PostConvertHook() error {
 		}
 		for _, cluster := range g.Resources {
 			if cluster.InstanceState.Attributes["name"] == r.InstanceState.Attributes["cluster"] {
-				g.Resources[i].Item["cluster"] = "${google_container_cluster." + cluster.InstanceState.Attributes["name"] + ".name}"
+				g.Resources[i].Item["cluster"] = "${google_container_cluster." + cluster.ResourceName + ".name}"
 			}
 		}
 	}

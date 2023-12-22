@@ -21,7 +21,7 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/dataproc/v1"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 var dataprocAllowEmptyValues = []string{""}
@@ -33,15 +33,15 @@ type DataprocGenerator struct {
 }
 
 // Run on DataprocClusterList and create for each TerraformResource
-func (g DataprocGenerator) createClusterResources(clusterList *dataproc.ProjectsRegionsClustersListCall, ctx context.Context) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g DataprocGenerator) createClusterResources(ctx context.Context, clusterList *dataproc.ProjectsRegionsClustersListCall) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := clusterList.Pages(ctx, func(page *dataproc.ListClustersResponse) error {
 		for _, cluster := range page.Clusters {
-			resource := terraform_utils.NewResource(
+			resource := terraformutils.NewResource(
 				cluster.ClusterName,
 				cluster.ClusterName,
 				"google_dataproc_cluster",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"name":    cluster.ClusterName,
 					"project": g.GetArgs()["project"].(string),
@@ -55,22 +55,22 @@ func (g DataprocGenerator) createClusterResources(clusterList *dataproc.Projects
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
 
 /*
 // Run on DataprocJobList and create for each TerraformResource
-func (g DataprocGenerator) createJobResources(jobList *dataproc.ProjectsRegionsJobsListCall, ctx context.Context) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g DataprocGenerator) createJobResources(jobList *dataproc.ProjectsRegionsJobsListCall, ctx context.Context) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := jobList.Pages(ctx, func(page *dataproc.ListJobsResponse) error {
 		for _, job := range page.Jobs {
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				job.Reference.JobId,
 				job.Reference.JobId,
 				"google_dataproc_job",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"project": g.GetArgs()["project"].(string),
 					"region":  g.GetArgs()["region"].(compute.Region).Name,
@@ -94,27 +94,14 @@ func (g *DataprocGenerator) InitResources() error {
 	ctx := context.Background()
 	dataprocService, err := dataproc.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	clusterList := dataprocService.Projects.Regions.Clusters.List(g.GetArgs()["project"].(string), g.GetArgs()["region"].(compute.Region).Name)
-	g.Resources = g.createClusterResources(clusterList, ctx)
+	g.Resources = g.createClusterResources(ctx, clusterList)
 
-	//jobList := dataprocService.Projects.Regions.Jobs.List(g.GetArgs()["project"].(string), g.GetArgs()["region"])
-	//g.Resources = append(g.Resources, g.createJobResources(jobList, ctx)...)
+	// jobList := dataprocService.Projects.Regions.Jobs.List(g.GetArgs()["project"].(string), g.GetArgs()["region"])
+	// g.Resources = append(g.Resources, g.createJobResources(jobList, ctx)...)
 
-	return nil
-
-}
-
-func (g *DataprocGenerator) PostConvertHook() error {
-	for i, r := range g.Resources {
-		// hack for provider bug
-		if v, exist := r.Item["cluster_config"].([]interface{})[0].(map[string]interface{})["preemptible_worker_config"]; exist {
-			if v.([]interface{})[0].(map[string]interface{})["num_instances"].(string) == "0" && len(v.([]interface{})[0].(map[string]interface{})["disk_config"].([]interface{})) == 0 {
-				delete(g.Resources[i].Item["cluster_config"].([]interface{})[0].(map[string]interface{}), "preemptible_worker_config")
-			}
-		}
-	}
 	return nil
 }

@@ -18,64 +18,55 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"sort"
+	"time"
 
 	"github.com/GoogleCloudPlatform/terraformer/cmd"
 	aws_terraforming "github.com/GoogleCloudPlatform/terraformer/providers/aws"
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
 )
 
-const command = "terraform init && terraform plan"
-
 func main() {
-	region := "ap-southeast-1"
-	profile := "personal"
-	services := []string{}
-	provider := &aws_terraforming.AWSProvider{}
-	for service := range provider.GetSupportedService() {
-		if service == "route53" {
-			continue
-		}
-		if service == "iam" {
-			continue
-		}
-		if service == "sg" {
-			continue
-		}
-		services = append(services, service)
+	tCommand := cmd.NewCmdRoot()
+	pathPattern := "{output}/{provider}/"
+	tCommand.SetArgs([]string{
+		"import",
+		"aws",
+		"--regions=ap-southeast-1",
+		"--resources=ssm",
+		"--profile=personal",
+		"--verbose",
+		"--compact",
+		"--path-pattern=" + pathPattern,
+	})
+	start := time.Now()
+	if err := tCommand.Execute(); err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+	log.Printf("Importing took %s", time.Since(start))
+	start = time.Now()
+	runTerraform(pathPattern)
+	log.Printf("Terraform init + plan took %s", time.Since(start))
+}
 
+func runTerraform(pathPattern string) {
+	rootPath, _ := os.Getwd()
+	provider := &aws_terraforming.AWSProvider{}
+
+	currentPath := cmd.Path(pathPattern, provider.GetName(), "", cmd.DefaultPathOutput)
+	if err := os.Chdir(currentPath); err != nil {
+		log.Println(err)
+		os.Exit(1)
 	}
-	services = []string{"vpc", "subnet", "nacl"}
-	sort.Strings(services)
-	provider = &aws_terraforming.AWSProvider{
-		Provider: terraform_utils.Provider{},
-	}
-	err := cmd.Import(provider, cmd.ImportOptions{
-		Resources:   services,
-		PathPattern: cmd.DefaultPathPattern,
-		PathOutput:  cmd.DefaultPathOutput,
-		State:       "local",
-		Connect:     true,
-	}, []string{region, profile})
+	tfCmd := exec.Command("sh", "-c", "terraform init && terraform plan")
+	tfCmd.Stdout = os.Stdout
+	tfCmd.Stderr = os.Stderr
+	err := tfCmd.Run()
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
-	rootPath, _ := os.Getwd()
-	for _, serviceName := range services {
-		currentPath := cmd.Path(cmd.DefaultPathPattern, provider.GetName(), serviceName, cmd.DefaultPathOutput)
-		if err := os.Chdir(currentPath); err != nil {
-			log.Println(err)
-			os.Exit(1)
-		}
-		cmd := exec.Command("sh", "-c", command)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Run()
-		if err != nil {
-			log.Println(err)
-			os.Exit(1)
-		}
-		os.Chdir(rootPath)
+	err = os.Chdir(rootPath)
+	if err != nil {
+		log.Println(err)
 	}
 }

@@ -15,10 +15,11 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"context"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 )
 
 var IgwAllowEmptyValues = []string{"tags."}
@@ -30,12 +31,15 @@ type IgwGenerator struct {
 // Generate TerraformResources from AWS API,
 // from each Internet gateway create 1 TerraformResource.
 // Need InternetGatewayId as ID for terraform resource
-func (g IgwGenerator) createResources(igws *ec2.DescribeInternetGatewaysOutput) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g *IgwGenerator) createResources(igws *ec2.DescribeInternetGatewaysOutput) []terraformutils.Resource {
+	var resources []terraformutils.Resource
 	for _, internetGateway := range igws.InternetGateways {
-		resources = append(resources, terraform_utils.NewSimpleResource(
-			aws.StringValue(internetGateway.InternetGatewayId),
-			aws.StringValue(internetGateway.InternetGatewayId),
+		if len(internetGateway.Attachments) == 0 {
+			continue
+		}
+		resources = append(resources, terraformutils.NewSimpleResource(
+			StringValue(internetGateway.InternetGatewayId),
+			StringValue(internetGateway.InternetGatewayId),
 			"aws_internet_gateway",
 			"aws",
 			IgwAllowEmptyValues,
@@ -45,13 +49,18 @@ func (g IgwGenerator) createResources(igws *ec2.DescribeInternetGatewaysOutput) 
 }
 
 func (g *IgwGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := ec2.New(sess)
-	igws, err := svc.DescribeInternetGateways(&ec2.DescribeInternetGatewaysInput{})
-	if err != nil {
-		return err
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
 	}
-	g.Resources = g.createResources(igws)
+	svc := ec2.NewFromConfig(config)
+	p := ec2.NewDescribeInternetGatewaysPaginator(svc, &ec2.DescribeInternetGatewaysInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		g.Resources = append(g.Resources, g.createResources(page)...)
+	}
 	return nil
-
 }

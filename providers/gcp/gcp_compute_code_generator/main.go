@@ -49,7 +49,7 @@ import (
 	"log"
 	{{ if .byZone  }}"strings"{{end}}
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"google.golang.org/api/compute/v1"
 )
@@ -66,15 +66,15 @@ type {{.titleResourceName}}Generator struct {
 }
 
 // Run on {{.resource}}List and create for each TerraformResource
-func (g {{.titleResourceName}}Generator) createResources(ctx context.Context, {{.resource}}List *compute.{{.titleResourceName}}ListCall{{ if .byZone  }}, zone string{{end}}) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g {{.titleResourceName}}Generator) createResources(ctx context.Context, {{.resource}}List *compute.{{.titleResourceName}}ListCall{{ if .byZone  }}, zone string{{end}}) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := {{.resource}}List.Pages(ctx, func(page *compute.{{.responseName}}) error {
 		for _, obj := range page.Items {
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				{{ if .idWithZone  }}zone+"/"+obj.Name,{{else}}obj.Name,{{end}}
-				obj.Name,
+				{{ if .idWithZone  }}zone+"/"+obj.Name,{{else}}obj.Name,{{end}}
 				"{{.terraformName}}",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"name":    obj.Name,
 					"project": g.GetArgs()["project"].(string),
@@ -89,7 +89,7 @@ func (g {{.titleResourceName}}Generator) createResources(ctx context.Context, {{
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
@@ -101,7 +101,7 @@ func (g *{{.titleResourceName}}Generator) InitResources() error {
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	{{ if .byZone  }}
 	for _, zoneLink := range g.GetArgs()["region"].(compute.Region).Zones {
@@ -139,26 +139,28 @@ const computeTemplate = `
 package gcp
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 // Map of supported GCP compute service with code generate
-var ComputeServices = map[string]terraform_utils.ServiceGenerator{
+var ComputeServices = map[string]terraformutils.ServiceGenerator{
 {{ range $key, $value := .services }}
-	"{{$key}}":                   &{{title $key}}Generator{},{{ end }}
+	"{{$key}}":                   &GCPFacade{service: &{{title $key}}Generator{}},{{ end }}
 
 }
 
 `
 
 func main() {
-	computeAPIData, err := ioutil.ReadFile("vendor/google.golang.org/api/compute/v1/compute-api.json") //TODO delete this hack
+	computeAPIData, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/google.golang.org/api/compute/v1/compute-api.json") // TODO delete this hack
 	if err != nil {
 		log.Fatal(err)
-
 	}
 	computeAPI := map[string]interface{}{}
-	json.Unmarshal(computeAPIData, &computeAPI)
+	err = json.Unmarshal(computeAPIData, &computeAPI)
+	if err != nil {
+		log.Fatal(err)
+	}
 	funcMap := template.FuncMap{
 		"title":   strings.Title,
 		"toLower": strings.ToLower,
@@ -179,7 +181,6 @@ func main() {
 				case "zone":
 					parameters = append(parameters, `g.GetArgs()["zone"].(string)`)
 				}
-
 			}
 			parameterOrder := strings.Join(parameters, ", ")
 			var tpl bytes.Buffer

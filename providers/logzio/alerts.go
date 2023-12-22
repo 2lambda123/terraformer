@@ -17,7 +17,7 @@ package logzio
 import (
 	"strconv"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"github.com/jonboydell/logzio_client/alerts"
 )
@@ -29,7 +29,7 @@ type AlertsGenerator struct {
 // Generate Terraform Resources from Logzio API,
 func (g *AlertsGenerator) InitResources() error {
 	var client *alerts.AlertsClient
-	client, _ = alerts.New(g.Args["token"].(string), g.Args["baseURL"].(string))
+	client, _ = alerts.New(g.Args["api_token"].(string), g.Args["base_url"].(string))
 
 	alerts, err := client.ListAlerts()
 	if err != nil {
@@ -37,7 +37,7 @@ func (g *AlertsGenerator) InitResources() error {
 	}
 	allowedEmptyValues := []string{"alert_notification_endpoints.#", "notification_emails.#"}
 	for _, alert := range alerts {
-		g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
+		g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
 			strconv.FormatInt(alert.AlertId, 10),
 			createSlug(alert.Title+"-"+strconv.FormatInt(alert.AlertId, 10)),
 			"logzio_alert",

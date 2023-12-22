@@ -19,26 +19,26 @@ import (
 	"log"
 
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-05-01/resources"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/go-azure-helpers/authentication"
 )
 
 type ResourceGroupGenerator struct {
 	AzureService
 }
 
-func (g ResourceGroupGenerator) createResources(groupListResultIterator resources.GroupListResultIterator) []terraform_utils.Resource {
-	var resources []terraform_utils.Resource
+func (g ResourceGroupGenerator) createResources(groupListResultIterator resources.GroupListResultIterator) []terraformutils.Resource {
+	var resources []terraformutils.Resource
 	for groupListResultIterator.NotDone() {
 		group := groupListResultIterator.Value()
-		resources = append(resources, terraform_utils.NewSimpleResource(
+		resources = append(resources, terraformutils.NewSimpleResource(
 			*group.ID,
 			*group.Name,
 			"azurerm_resource_group",
 			"azurerm",
 			[]string{}))
-		err := groupListResultIterator.Next()
-		if err != nil {
+		if err := groupListResultIterator.Next(); err != nil {
 			log.Println(err)
 			break
 		}
@@ -48,12 +48,25 @@ func (g ResourceGroupGenerator) createResources(groupListResultIterator resource
 
 func (g *ResourceGroupGenerator) InitResources() error {
 	ctx := context.Background()
-	groupsClient := resources.NewGroupsClient(g.Args["subscription"].(string))
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return err
+	groupsClient := resources.NewGroupsClient(g.Args["config"].(authentication.Config).SubscriptionID)
+
+	groupsClient.Authorizer = g.Args["authorizer"].(autorest.Authorizer)
+
+	if rg := g.Args["resource_group"].(string); rg != "" {
+		group, err := groupsClient.Get(ctx, rg)
+		if err != nil {
+			return err
+		}
+		g.Resources = []terraformutils.Resource{
+			terraformutils.NewSimpleResource(
+				*group.ID,
+				*group.Name,
+				"azurerm_resource_group",
+				"azurerm",
+				[]string{}),
+		}
+		return nil
 	}
-	groupsClient.Authorizer = authorizer
 	output, err := groupsClient.ListComplete(ctx, "", nil)
 	if err != nil {
 		return err

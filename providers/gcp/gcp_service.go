@@ -15,9 +15,18 @@
 package gcp
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
-type GCPService struct {
-	terraform_utils.Service
+type GCPService struct { //nolint
+	terraformutils.Service
+}
+
+func (s *GCPService) applyCustomProviderType(resources []terraformutils.Resource, providerName string) []terraformutils.Resource {
+	editedResources := []terraformutils.Resource{}
+	for _, r := range resources {
+		r.Item["provider"] = providerName
+		editedResources = append(editedResources, r)
+	}
+	return editedResources
 }

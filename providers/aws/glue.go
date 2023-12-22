@@ -15,51 +15,118 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	"github.com/aws/aws-sdk-go/service/glue"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"context"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/aws/aws-sdk-go-v2/service/glue"
 )
 
 type GlueGenerator struct {
 	AWSService
 }
 
-func (g *GlueGenerator) loadGlueCrawlers(svc *glue.Glue) error {
+func (g *GlueGenerator) loadGlueCrawlers(svc *glue.Client) error {
 	var GlueCrawlerAllowEmptyValues = []string{"tags."}
-	crawlers, err := svc.GetCrawlers(&glue.GetCrawlersInput{})
-	if err != nil {
-		return err
-	}
-
-	for _, crawler := range crawlers.Crawlers {
-		resource := terraform_utils.NewSimpleResource(*crawler.Name, *crawler.Name,
-			"aws_glue_crawler",
-			"aws",
-			GlueCrawlerAllowEmptyValues)
-		g.Resources = append(g.Resources, resource)
+	p := glue.NewGetCrawlersPaginator(svc, &glue.GetCrawlersInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		for _, crawler := range page.Crawlers {
+			resource := terraformutils.NewSimpleResource(*crawler.Name, *crawler.Name,
+				"aws_glue_crawler",
+				"aws",
+				GlueCrawlerAllowEmptyValues)
+			g.Resources = append(g.Resources, resource)
+		}
 	}
 	return nil
 }
 
-func (g *GlueGenerator) loadGlueCatalogDatabase(svc *glue.Glue, accont *string) error {
+func (g *GlueGenerator) loadGlueCatalogDatabase(svc *glue.Client, account *string) (databaseNames []*string, error error) {
 	var GlueCatalogDatabaseAllowEmptyValues = []string{"tags."}
-	catalogDatabases, err := svc.GetDatabases(&glue.GetDatabasesInput{})
-	if err != nil {
-		return err
+	p := glue.NewGetDatabasesPaginator(svc, &glue.GetDatabasesInput{})
+	for p.HasMorePages() {
+		page, error := p.NextPage(context.TODO())
+		if error != nil {
+			return databaseNames, error
+		}
+		for _, catalogDatabase := range page.DatabaseList {
+			// format of ID is "CATALOG-ID:DATABASE-NAME".
+			// CATALOG-ID is AWS Account ID
+			// https://docs.aws.amazon.com/cli/latest/reference/glue/create-database.html#options
+			id := *account + ":" + *catalogDatabase.Name
+			resource := terraformutils.NewSimpleResource(id, *catalogDatabase.Name,
+				"aws_glue_catalog_database",
+				"aws",
+				GlueCatalogDatabaseAllowEmptyValues)
+			g.Resources = append(g.Resources, resource)
+			databaseNames = append(databaseNames, catalogDatabase.Name)
+		}
 	}
+	return databaseNames, nil
+}
 
-	for _, catalogDatabase := range catalogDatabases.DatabaseList {
-		// format of ID is "CATALOG-ID:DATABASE-NAME".
-		// CATALOG-ID is AWS Account ID
-		// https://docs.aws.amazon.com/cli/latest/reference/glue/create-database.html#options
-		id := *accont + ":" + *catalogDatabase.Name
-		resource := terraform_utils.NewSimpleResource(id, *catalogDatabase.Name,
-			"aws_glue_catalog_database",
-			"aws",
-			GlueCatalogDatabaseAllowEmptyValues)
-		g.Resources = append(g.Resources, resource)
+func (g *GlueGenerator) loadGlueCatalogTable(svc *glue.Client, account *string, databaseName *string) error {
+	// format of ID is "CATALOG-ID:DATABASE-NAME:TABLE-NAME".
+	// CATALOG-ID is AWS Account ID
+	// https://docs.aws.amazon.com/cli/latest/reference/glue/create-database.html#options
+	var GlueCatalogTableAllowEmptyValues = []string{"tags."}
+	p := glue.NewGetTablesPaginator(svc, &glue.GetTablesInput{DatabaseName: databaseName})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		for _, catalogTable := range page.TableList {
+			databaseTable := *databaseName + ":" + *catalogTable.Name
+			id := *account + ":" + databaseTable
+			resource := terraformutils.NewSimpleResource(id, databaseTable,
+				"aws_glue_catalog_table",
+				"aws",
+				GlueCatalogTableAllowEmptyValues)
+			g.Resources = append(g.Resources, resource)
+		}
 	}
+	return nil
+}
 
+func (g *GlueGenerator) loadGlueJobs(svc *glue.Client) error {
+	var GlueJobAllowEmptyValues = []string{"tags."}
+	p := glue.NewGetJobsPaginator(svc, &glue.GetJobsInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		for _, job := range page.Jobs {
+			resource := terraformutils.NewSimpleResource(*job.Name, *job.Name,
+				"aws_glue_job",
+				"aws",
+				GlueJobAllowEmptyValues)
+			g.Resources = append(g.Resources, resource)
+		}
+	}
+	return nil
+}
+
+func (g *GlueGenerator) loadGlueTriggers(svc *glue.Client) error {
+	var GlueTriggerAllowEmptyValues = []string{"tags."}
+	p := glue.NewGetTriggersPaginator(svc, &glue.GetTriggersInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		for _, trigger := range page.Triggers {
+			resource := terraformutils.NewSimpleResource(*trigger.Name, *trigger.Name,
+				"aws_glue_trigger",
+				"aws",
+				GlueTriggerAllowEmptyValues)
+			g.Resources = append(g.Resources, resource)
+		}
+	}
 	return nil
 }
 
@@ -68,21 +135,37 @@ func (g *GlueGenerator) loadGlueCatalogDatabase(svc *glue.Glue, accont *string) 
 // Need only database name as ID for terraform resource
 // AWS api support paging
 func (g *GlueGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := glue.New(sess)
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := glue.NewFromConfig(config)
 
-	stsSvc := sts.New(sess)
-	identity, err := stsSvc.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	account, err := g.getAccountNumber(config)
 	if err != nil {
 		return err
 	}
-	account := identity.Account
 
 	if err := g.loadGlueCrawlers(svc); err != nil {
 		return err
 	}
-	if err := g.loadGlueCatalogDatabase(svc, account); err != nil {
+	var DatabaseNames []*string
+	if DatabaseNames, err = g.loadGlueCatalogDatabase(svc, account); err != nil {
 		return err
 	}
+	for _, DatabaseName := range DatabaseNames {
+		if err := g.loadGlueCatalogTable(svc, account, DatabaseName); err != nil {
+			return err
+		}
+	}
+
+	if err := g.loadGlueJobs(svc); err != nil {
+		return err
+	}
+
+	if err := g.loadGlueTriggers(svc); err != nil {
+		return err
+	}
+
 	return nil
 }

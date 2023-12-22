@@ -15,13 +15,13 @@
 package aws
 
 import (
+	"context"
 	"log"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/aws/aws-sdk-go-v2/service/acm"
 )
 
 var acmAllowEmptyValues = []string{}
@@ -32,43 +32,42 @@ type ACMGenerator struct {
 	AWSService
 }
 
-func (g ACMGenerator) createCertificatesResources(svc *acm.ACM) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
-	err := svc.ListCertificatesPages(
-		&acm.ListCertificatesInput{},
-		func(certs *acm.ListCertificatesOutput, lastPage bool) bool {
-			for _, cert := range certs.CertificateSummaryList {
-				certArn := aws.StringValue(cert.CertificateArn)
-				certID := extractCertificateUUID(certArn)
-				resources = append(resources, terraform_utils.NewResource(
-					certArn,
-					certID+"_"+strings.TrimSuffix(aws.StringValue(cert.DomainName), "."),
-					"aws_acm_certificate",
-					"aws",
-					map[string]string{
-						"domain_name": aws.StringValue(cert.DomainName),
-					},
-					acmAllowEmptyValues,
-					acmAdditionalFields,
-				))
-			}
-			return true
-		},
-	)
-
-	if err != nil {
-		log.Println(err)
-		return resources
+func (g *ACMGenerator) createCertificatesResources(svc *acm.Client) []terraformutils.Resource {
+	var resources []terraformutils.Resource
+	p := acm.NewListCertificatesPaginator(svc, &acm.ListCertificatesInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			log.Println(err)
+			return resources
+		}
+		for _, cert := range page.CertificateSummaryList {
+			certArn := *cert.CertificateArn
+			certID := extractCertificateUUID(certArn)
+			resources = append(resources, terraformutils.NewResource(
+				certArn,
+				certID+"_"+strings.TrimSuffix(*cert.DomainName, "."),
+				"aws_acm_certificate",
+				"aws",
+				map[string]string{
+					"domain_name": *cert.DomainName,
+				},
+				acmAllowEmptyValues,
+				acmAdditionalFields,
+			))
+		}
 	}
-
 	return resources
 }
 
 // Generate TerraformResources from AWS API,
 // create terraform resource for each certificates
 func (g *ACMGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := acm.New(sess)
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := acm.NewFromConfig(config)
 
 	g.Resources = g.createCertificatesResources(svc)
 	return nil

@@ -19,7 +19,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"google.golang.org/api/compute/v1"
 )
@@ -33,15 +33,15 @@ type TargetSslProxiesGenerator struct {
 }
 
 // Run on targetSslProxiesList and create for each TerraformResource
-func (g TargetSslProxiesGenerator) createResources(ctx context.Context, targetSslProxiesList *compute.TargetSslProxiesListCall) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g TargetSslProxiesGenerator) createResources(ctx context.Context, targetSslProxiesList *compute.TargetSslProxiesListCall) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := targetSslProxiesList.Pages(ctx, func(page *compute.TargetSslProxyList) error {
 		for _, obj := range page.Items {
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				obj.Name,
 				obj.Name,
 				"google_compute_target_ssl_proxy",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"name":    obj.Name,
 					"project": g.GetArgs()["project"].(string),
@@ -53,7 +53,7 @@ func (g TargetSslProxiesGenerator) createResources(ctx context.Context, targetSs
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
@@ -65,7 +65,7 @@ func (g *TargetSslProxiesGenerator) InitResources() error {
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	targetSslProxiesList := computeService.TargetSslProxies.List(g.GetArgs()["project"].(string))

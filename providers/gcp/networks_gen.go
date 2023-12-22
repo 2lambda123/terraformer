@@ -19,7 +19,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"google.golang.org/api/compute/v1"
 )
@@ -33,15 +33,15 @@ type NetworksGenerator struct {
 }
 
 // Run on networksList and create for each TerraformResource
-func (g NetworksGenerator) createResources(ctx context.Context, networksList *compute.NetworksListCall) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g NetworksGenerator) createResources(ctx context.Context, networksList *compute.NetworksListCall) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := networksList.Pages(ctx, func(page *compute.NetworkList) error {
 		for _, obj := range page.Items {
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				obj.Name,
 				obj.Name,
 				"google_compute_network",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"name":    obj.Name,
 					"project": g.GetArgs()["project"].(string),
@@ -53,7 +53,7 @@ func (g NetworksGenerator) createResources(ctx context.Context, networksList *co
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
@@ -65,7 +65,7 @@ func (g *NetworksGenerator) InitResources() error {
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	networksList := computeService.Networks.List(g.GetArgs()["project"].(string))

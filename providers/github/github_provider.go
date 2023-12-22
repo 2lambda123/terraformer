@@ -17,20 +17,17 @@ package github
 import (
 	"os"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/pkg/errors"
-
 	"github.com/zclconf/go-cty/cty"
 )
 
-type GithubProvider struct {
-	terraform_utils.Provider
-	organization string
-	token        string
+type GithubProvider struct { //nolint
+	terraformutils.Provider
+	owner   string
+	token   string
+	baseURL string
 }
-
-const githubProviderVersion = "~>2.2.1"
 
 func (p GithubProvider) GetResourceConnections() map[string]map[string][]string {
 	return map[string]map[string][]string{}
@@ -40,8 +37,7 @@ func (p GithubProvider) GetProviderData(arg ...string) map[string]interface{} {
 	return map[string]interface{}{
 		"provider": map[string]interface{}{
 			"github": map[string]interface{}{
-				"version":      githubProviderVersion,
-				"organization": p.organization,
+				"owner": p.owner,
 			},
 		},
 	}
@@ -49,22 +45,29 @@ func (p GithubProvider) GetProviderData(arg ...string) map[string]interface{} {
 
 func (p *GithubProvider) GetConfig() cty.Value {
 	return cty.ObjectVal(map[string]cty.Value{
-		"organization": cty.StringVal(p.organization),
-		"token":        cty.StringVal(p.token),
+		"owner":    cty.StringVal(p.owner),
+		"token":    cty.StringVal(p.token),
+		"base_url": cty.StringVal(p.baseURL),
 	})
 }
 
-// Init GithubProvider with organization
+// Init GithubProvider with owner
 func (p *GithubProvider) Init(args []string) error {
-	p.organization = args[0]
+	p.owner = args[0]
 	if len(args) < 2 {
 		if os.Getenv("GITHUB_TOKEN") == "" {
 			return errors.New("token requirement")
-		} else {
-			p.token = os.Getenv("GITHUB_TOKEN")
 		}
+		p.token = os.Getenv("GITHUB_TOKEN")
 	} else {
 		p.token = args[1]
+	}
+	if len(args) > 2 {
+		if args[2] != "" {
+			p.baseURL = args[2]
+		} else {
+			p.baseURL = githubDefaultURL
+		}
 	}
 	return nil
 }
@@ -73,27 +76,33 @@ func (p *GithubProvider) GetName() string {
 	return "github"
 }
 
-func (p *GithubProvider) InitService(serviceName string) error {
+func (p *GithubProvider) InitService(serviceName string, verbose bool) error {
 	var isSupported bool
 	if _, isSupported = p.GetSupportedService()[serviceName]; !isSupported {
 		return errors.New(p.GetName() + ": " + serviceName + " not supported service")
 	}
 	p.Service = p.GetSupportedService()[serviceName]
 	p.Service.SetName(serviceName)
+	p.Service.SetVerbose(verbose)
 	p.Service.SetProviderName(p.GetName())
 	p.Service.SetArgs(map[string]interface{}{
-		"organization": p.organization,
-		"token":        p.token,
+		"owner":    p.owner,
+		"token":    p.token,
+		"base_url": p.baseURL,
 	})
 	return nil
 }
 
 // GetSupportedService return map of support service for Github
-func (p *GithubProvider) GetSupportedService() map[string]terraform_utils.ServiceGenerator {
-	return map[string]terraform_utils.ServiceGenerator{
+func (p *GithubProvider) GetSupportedService() map[string]terraformutils.ServiceGenerator {
+	return map[string]terraformutils.ServiceGenerator{
 		"members":               &MembersGenerator{},
+		"organization":          &OrganizationGenerator{},
+		"organization_blocks":   &OrganizationBlockGenerator{},
+		"organization_projects": &OrganizationProjectGenerator{},
 		"organization_webhooks": &OrganizationWebhooksGenerator{},
 		"repositories":          &RepositoriesGenerator{},
 		"teams":                 &TeamsGenerator{},
+		"user_ssh_keys":         &UserSSHKeyGenerator{},
 	}
 }

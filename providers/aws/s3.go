@@ -15,17 +15,14 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"strings"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 var S3AllowEmptyValues = []string{"tags."}
@@ -39,65 +36,67 @@ type S3Generator struct {
 // createResources iterate on all buckets
 // for each bucket we check region and choose only bucket from set region
 // for each bucket try get bucket policy, if policy exist create additional NewTerraformResource for policy
-func (g S3Generator) createResources(sess *session.Session, buckets *s3.ListBucketsOutput, region string) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
-	svc := s3.New(sess)
+func (g *S3Generator) createResources(config aws.Config, buckets *s3.ListBucketsOutput, region string) []terraformutils.Resource {
+	var resources []terraformutils.Resource
+	svc := s3.NewFromConfig(config)
 	for _, bucket := range buckets.Buckets {
-		resourceName := aws.StringValue(bucket.Name)
-		location, err := svc.GetBucketLocation(&s3.GetBucketLocationInput{Bucket: bucket.Name})
+		resourceName := StringValue(bucket.Name)
+		location, err := svc.GetBucketLocation(context.TODO(), &s3.GetBucketLocationInput{Bucket: bucket.Name})
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 		// check if bucket in region
-		if s3.NormalizeBucketLocation(aws.StringValue(location.LocationConstraint)) == region {
-			resources = append(resources, terraform_utils.NewResource(
+		constraintString := string(location.LocationConstraint)
+		if constraintString == region || (constraintString == "" && region == "us-east-1") {
+			attributes := map[string]string{
+				"force_destroy": "false",
+				"acl":           "private",
+			}
+			// try get policy
+			var policy *s3.GetBucketPolicyOutput
+			policy, err = svc.GetBucketPolicy(context.TODO(), &s3.GetBucketPolicyInput{
+				Bucket: bucket.Name,
+			})
+
+			if err == nil && policy.Policy != nil {
+				attributes["policy"] = *policy.Policy
+				resources = append(resources, terraformutils.NewResource(
+					resourceName,
+					resourceName,
+					"aws_s3_bucket_policy",
+					"aws",
+					nil,
+					S3AllowEmptyValues,
+					S3AdditionalFields))
+			}
+			resources = append(resources, terraformutils.NewResource(
 				resourceName,
 				resourceName,
 				"aws_s3_bucket",
 				"aws",
-				map[string]string{
-					"force_destroy": "false",
-					"acl":           "private",
-				},
+				attributes,
 				S3AllowEmptyValues,
 				S3AdditionalFields))
-			// try get policy
-			_, err := svc.GetBucketPolicy(&s3.GetBucketPolicyInput{
-				Bucket: bucket.Name,
-			})
-
-			if err != nil {
-				if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "NoSuchBucketPolicy" {
-					// Bucket without policy
-					continue
-				}
-				log.Println(err)
-				continue
-			}
-			// if bucket policy exist create TerraformResource with bucket name as ID
-			resources = append(resources, terraform_utils.NewSimpleResource(
-				resourceName,
-				resourceName,
-				"aws_s3_bucket_policy",
-				"aws",
-				S3AllowEmptyValues))
 		}
 	}
 	return resources
 }
 
 // Generate TerraformResources from AWS API,
-// from each s3 bucket create 2 TerraformResource(bucket and bucket policy)
 // Need bucket name as ID for terraform resource
 func (g *S3Generator) InitResources() error {
-	sess := g.generateSession()
-	svc := s3.New(sess)
-	buckets, err := svc.ListBuckets(&s3.ListBucketsInput{})
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := s3.NewFromConfig(config)
+
+	buckets, err := svc.ListBuckets(context.TODO(), nil)
 	if err != nil {
 		return err
 	}
-	g.Resources = g.createResources(sess, buckets, g.GetArgs()["region"].(string))
+	g.Resources = g.createResources(config, buckets, g.GetArgs()["region"].(string))
 	return nil
 }
 
@@ -105,29 +104,16 @@ func (g *S3Generator) InitResources() error {
 // support only bucket with policy
 func (g *S3Generator) PostConvertHook() error {
 	for i, resource := range g.Resources {
-		if resource.InstanceInfo.Type != "aws_s3_bucket_policy" {
-			continue
-		}
-		policy := resource.Item["policy"].(string)
-		g.Resources[i].Item["policy"] = fmt.Sprintf(`<<POLICY
+		if resource.InstanceInfo.Type == "aws_s3_bucket" {
+			if val, ok := g.Resources[i].Item["acl"]; ok && val == "private" {
+				delete(g.Resources[i].Item, "acl")
+			}
+			if val, ok := g.Resources[i].Item["policy"]; ok {
+				g.Resources[i].Item["policy"] = fmt.Sprintf(`<<POLICY
 %s
-POLICY`, policy)
+POLICY`, g.escapeAwsInterpolation(val.(string)))
+			}
+		}
 	}
 	return nil
-}
-
-func (g *S3Generator) ParseFilter(rawFilter []string) {
-	g.Filter = map[string][]string{}
-	for _, resource := range rawFilter {
-		t := strings.Split(resource, "=")
-		if len(t) != 2 {
-			log.Println("Pattern for filter must be resource_type=id1:id2:id4")
-			continue
-		}
-		resourceName, resourcesID := t[0], t[1]
-		g.Filter[resourceName] = strings.Split(resourcesID, ":")
-		if resourceName == "aws_s3_bucket" {
-			g.Filter["aws_s3_bucket_policy"] = strings.Split(resourcesID, ":")
-		}
-	}
 }

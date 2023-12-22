@@ -16,7 +16,8 @@ package gcp
 
 import (
 	"context"
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"google.golang.org/api/iterator"
 
 	"cloud.google.com/go/logging/logadmin"
@@ -31,9 +32,9 @@ type LoggingGenerator struct {
 }
 
 func (g *LoggingGenerator) loadLoggingMetrics(ctx context.Context, client *logadmin.Client) error {
-	metricIterator:= client.Metrics(ctx)
+	metricIterator := client.Metrics(ctx)
 
-	for{
+	for {
 		metric, err := metricIterator.Next()
 
 		if err == iterator.Done {
@@ -42,19 +43,18 @@ func (g *LoggingGenerator) loadLoggingMetrics(ctx context.Context, client *logad
 		if err != nil {
 			return err
 		}
-		g.Resources = append(g.Resources, terraform_utils.NewResource(
+		g.Resources = append(g.Resources, terraformutils.NewResource(
 			metric.ID,
 			metric.ID,
 			"google_logging_metric",
-			"google",
+			g.ProviderName,
 			map[string]string{
-				"name": metric.ID,
+				"name":    metric.ID,
 				"project": g.GetArgs()["project"].(string),
 			},
 			loggingAllowEmptyValues,
 			loggingAdditionalFields,
-			))
-
+		))
 	}
 	return nil
 }

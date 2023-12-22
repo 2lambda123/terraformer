@@ -15,11 +15,13 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	"github.com/aws/aws-sdk-go/aws"
+	"context"
+	"fmt"
+	"log"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
 )
 
 var snsAllowEmptyValues = []string{"tags."}
@@ -29,53 +31,74 @@ type SnsGenerator struct {
 }
 
 // TF currently doesn't support email subscriptions + subscriptions with pending confirmations
-func (g SnsGenerator) isSupportedSubscription(protocol, subscriptionId string) bool {
-	return protocol != "email" && protocol != "email-json" && subscriptionId != "PendingConfirmation"
+func (g *SnsGenerator) isSupportedSubscription(protocol, subscriptionID string) bool {
+	return protocol != "email" && protocol != "email-json" && subscriptionID != "PendingConfirmation"
 }
 
 func (g *SnsGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := sns.New(sess)
-
-	err := svc.ListTopicsPages(&sns.ListTopicsInput{}, func(topics *sns.ListTopicsOutput, lastPage bool) bool {
-		for _, topic := range topics.Topics {
-			arnParts := strings.Split(aws.StringValue(topic.TopicArn), ":")
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := sns.NewFromConfig(config)
+	p := sns.NewListTopicsPaginator(svc, &sns.ListTopicsInput{})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.TODO())
+		if err != nil {
+			return err
+		}
+		for _, topic := range page.Topics {
+			arnParts := strings.Split(StringValue(topic.TopicArn), ":")
 			topicName := arnParts[len(arnParts)-1]
 
-			g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
-				aws.StringValue(topic.TopicArn),
+			g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
+				StringValue(topic.TopicArn),
 				topicName,
 				"aws_sns_topic",
 				"aws",
 				snsAllowEmptyValues,
 			))
 
-			_ = svc.ListSubscriptionsByTopicPages(&sns.ListSubscriptionsByTopicInput{
+			topicSubsPage := sns.NewListSubscriptionsByTopicPaginator(svc, &sns.ListSubscriptionsByTopicInput{
 				TopicArn: topic.TopicArn,
-			}, func(subscriptions *sns.ListSubscriptionsByTopicOutput, lastPage bool) bool {
-				for _, subscription := range subscriptions.Subscriptions {
-					subscriptionArnParts := strings.Split(aws.StringValue(subscription.SubscriptionArn), ":")
-					subscriptionId := subscriptionArnParts[len(subscriptionArnParts)-1]
+			})
+			for topicSubsPage.HasMorePages() {
+				topicSubsNextPage, err := topicSubsPage.NextPage(context.TODO())
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				for _, subscription := range topicSubsNextPage.Subscriptions {
+					subscriptionArnParts := strings.Split(StringValue(subscription.SubscriptionArn), ":")
+					subscriptionID := subscriptionArnParts[len(subscriptionArnParts)-1]
 
-					if g.isSupportedSubscription(aws.StringValue(subscription.Protocol), subscriptionId) {
-						g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
-							aws.StringValue(subscription.SubscriptionArn),
-							"subscription-"+subscriptionId,
+					if g.isSupportedSubscription(StringValue(subscription.Protocol), subscriptionID) {
+						g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
+							StringValue(subscription.SubscriptionArn),
+							"subscription-"+subscriptionID,
 							"aws_sns_topic_subscription",
 							"aws",
 							snsAllowEmptyValues,
 						))
 					}
 				}
-
-				return !lastPage
-			})
+			}
 		}
+	}
+	return nil
+}
 
-		return !lastPage
-	})
-	if err != nil {
-		return err
+// PostConvertHook for add policy json as heredoc
+func (g *SnsGenerator) PostConvertHook() error {
+	for i, resource := range g.Resources {
+		if resource.InstanceInfo.Type == "aws_sns_topic" {
+			if val, ok := g.Resources[i].Item["policy"]; ok {
+				policy := g.escapeAwsInterpolation(val.(string))
+				g.Resources[i].Item["policy"] = fmt.Sprintf(`<<POLICY
+%s
+POLICY`, policy)
+			}
+		}
 	}
 	return nil
 }

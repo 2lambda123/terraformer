@@ -19,7 +19,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"google.golang.org/api/compute/v1"
 )
@@ -33,15 +33,15 @@ type SubnetworksGenerator struct {
 }
 
 // Run on subnetworksList and create for each TerraformResource
-func (g SubnetworksGenerator) createResources(ctx context.Context, subnetworksList *compute.SubnetworksListCall) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g SubnetworksGenerator) createResources(ctx context.Context, subnetworksList *compute.SubnetworksListCall) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := subnetworksList.Pages(ctx, func(page *compute.SubnetworkList) error {
 		for _, obj := range page.Items {
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				obj.Name,
 				obj.Name,
 				"google_compute_subnetwork",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"name":    obj.Name,
 					"project": g.GetArgs()["project"].(string),
@@ -53,7 +53,7 @@ func (g SubnetworksGenerator) createResources(ctx context.Context, subnetworksLi
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
@@ -65,7 +65,7 @@ func (g *SubnetworksGenerator) InitResources() error {
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	subnetworksList := computeService.Subnetworks.List(g.GetArgs()["project"].(string), g.GetArgs()["region"].(compute.Region).Name)

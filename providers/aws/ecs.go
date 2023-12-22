@@ -15,12 +15,13 @@
 package aws
 
 import (
+	"context"
 	"fmt"
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"strconv"
 	"strings"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 )
 
 var ecsAllowEmptyValues = []string{"tags."}
@@ -30,34 +31,48 @@ type EcsGenerator struct {
 }
 
 func (g *EcsGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := ecs.New(sess)
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := ecs.NewFromConfig(config)
 
-	err := svc.ListClustersPages(&ecs.ListClustersInput{}, func(clusters *ecs.ListClustersOutput, lastPage bool) bool {
-		for _, clusterArn := range clusters.ClusterArns {
-			arnParts := strings.Split(aws.StringValue(clusterArn), "/")
+	p := ecs.NewListClustersPaginator(svc, &ecs.ListClustersInput{})
+	for p.HasMorePages() {
+		page, e := p.NextPage(context.TODO())
+		if e != nil {
+			return e
+		}
+		for _, clusterArn := range page.ClusterArns {
+			arnParts := strings.Split(clusterArn, "/")
 			clusterName := arnParts[len(arnParts)-1]
 
-			g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
-				aws.StringValue(clusterArn),
+			g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
+				clusterArn,
 				clusterName,
 				"aws_ecs_cluster",
 				"aws",
 				ecsAllowEmptyValues,
 			))
 
-			_ = svc.ListServicesPages(&ecs.ListServicesInput{
-				Cluster: clusterArn,
-			}, func(services *ecs.ListServicesOutput, lastPage bool) bool {
-				for _, serviceArn := range services.ServiceArns {
-					arnParts := strings.Split(aws.StringValue(serviceArn), "/")
+			servicePage := ecs.NewListServicesPaginator(svc, &ecs.ListServicesInput{
+				Cluster: &clusterArn,
+			})
+			for servicePage.HasMorePages() {
+				serviceNextPage, err := servicePage.NextPage(context.TODO())
+				if err != nil {
+					fmt.Println(err.Error())
+					continue
+				}
+				for _, serviceArn := range serviceNextPage.ServiceArns {
+					arnParts := strings.Split(serviceArn, "/")
 					serviceName := arnParts[len(arnParts)-1]
 
-					serResp, err := svc.DescribeServices(&ecs.DescribeServicesInput{
-						Services: []*string{
-							aws.String(serviceName),
+					serResp, err := svc.DescribeServices(context.TODO(), &ecs.DescribeServicesInput{
+						Services: []string{
+							serviceName,
 						},
-						Cluster: clusterArn,
+						Cluster: &clusterArn,
 					})
 					if err != nil {
 						fmt.Println(err.Error())
@@ -65,49 +80,50 @@ func (g *EcsGenerator) InitResources() error {
 					}
 					serviceDetails := serResp.Services[0]
 
-					g.Resources = append(g.Resources, terraform_utils.NewResource(
-						aws.StringValue(serviceArn),
-						serviceName,
+					g.Resources = append(g.Resources, terraformutils.NewResource(
+						serviceArn,
+						clusterName+"_"+serviceName,
 						"aws_ecs_service",
 						"aws",
 						map[string]string{
-							"task_definition": aws.StringValue(serviceDetails.TaskDefinition),
+							"task_definition": StringValue(serviceDetails.TaskDefinition),
 							"cluster":         clusterName,
 							"name":            serviceName,
-							"id":              aws.StringValue(serviceArn),
+							"id":              serviceArn,
 						},
 						ecsAllowEmptyValues,
 						map[string]interface{}{},
 					))
 				}
-				return !lastPage
-			})
+			}
 		}
-		return !lastPage
-	})
-	if err != nil {
-		return err
 	}
 
-	taskDefinitionsMap := map[string]terraform_utils.Resource{}
-	err = svc.ListTaskDefinitionsPages(&ecs.ListTaskDefinitionsInput{}, func(taskDefinitions *ecs.ListTaskDefinitionsOutput, lastPage bool) bool {
-		for _, taskDefinitionArn := range taskDefinitions.TaskDefinitionArns {
-			arnParts := strings.Split(aws.StringValue(taskDefinitionArn), ":")
+	taskDefinitionsMap := map[string]terraformutils.Resource{}
+	taskDefinitionsPage := ecs.NewListTaskDefinitionsPaginator(svc, &ecs.ListTaskDefinitionsInput{})
+	for taskDefinitionsPage.HasMorePages() {
+		taskDefinitionsNextPage, e := taskDefinitionsPage.NextPage(context.TODO())
+		if e != nil {
+			fmt.Println(e.Error())
+			continue
+		}
+		for _, taskDefinitionArn := range taskDefinitionsNextPage.TaskDefinitionArns {
+			arnParts := strings.Split(taskDefinitionArn, ":")
 			definitionWithFamily := arnParts[len(arnParts)-2]
 			revision, _ := strconv.Atoi(arnParts[len(arnParts)-1])
 
 			// fetch only latest revision of task definitions
 			if val, ok := taskDefinitionsMap[definitionWithFamily]; !ok || val.AdditionalFields["revision"].(int) < revision {
-				taskDefinitionsMap[definitionWithFamily] = terraform_utils.NewResource(
-					aws.StringValue(taskDefinitionArn),
+				taskDefinitionsMap[definitionWithFamily] = terraformutils.NewResource(
+					taskDefinitionArn,
 					definitionWithFamily,
 					"aws_ecs_task_definition",
 					"aws",
 					map[string]string{
-						"task_definition":       aws.StringValue(taskDefinitionArn),
+						"task_definition":       taskDefinitionArn,
 						"container_definitions": "{}",
 						"family":                "test-task",
-						"arn":                   aws.StringValue(taskDefinitionArn),
+						"arn":                   taskDefinitionArn,
 					},
 					[]string{},
 					map[string]interface{}{
@@ -116,15 +132,10 @@ func (g *EcsGenerator) InitResources() error {
 				)
 			}
 		}
-
-		return !lastPage
-	})
+	}
 	for _, v := range taskDefinitionsMap {
 		delete(v.AdditionalFields, "revision")
 		g.Resources = append(g.Resources, v)
-	}
-	if err != nil {
-		return err
 	}
 
 	return nil

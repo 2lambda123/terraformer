@@ -19,23 +19,29 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	cf "github.com/cloudflare/cloudflare-go"
 )
 
-type CloudflareService struct {
-	terraform_utils.Service
+type CloudflareService struct { //nolint
+	terraformutils.Service
 }
 
 func (s *CloudflareService) initializeAPI() (*cf.API, error) {
-	apiKey := os.Getenv("CLOUDFLARE_TOKEN")
+	apiKey := os.Getenv("CLOUDFLARE_API_KEY")
 	apiEmail := os.Getenv("CLOUDFLARE_EMAIL")
+	apiToken := os.Getenv("CLOUDFLARE_API_TOKEN")
+	accountID := os.Getenv("CLOUDFLARE_ACCOUNT_ID")
 
-	if apiEmail == "" || apiKey == "" {
-		err := errors.New("No CLOUDFLARE_TOKEN/CLOUDFLARE_EMAIL environment set")
+	if apiToken == "" && (apiEmail == "" || apiKey == "") {
+		err := errors.New("Either CLOUDFLARE_API_TOKEN or CLOUDFLARE_API_KEY/CLOUDFLARE_EMAIL environment variables must be set")
 		fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 
-	return cf.New(apiKey, apiEmail)
+	if apiToken != "" {
+		return cf.NewWithAPIToken(apiToken, cf.UsingAccount(accountID))
+	}
+
+	return cf.New(apiKey, apiEmail, cf.UsingAccount(accountID))
 }

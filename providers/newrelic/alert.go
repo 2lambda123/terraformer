@@ -16,22 +16,23 @@ package newrelic
 
 import (
 	"fmt"
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	newrelic "github.com/paultyng/go-newrelic/api"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	newrelic "github.com/newrelic/newrelic-client-go/newrelic"
 )
 
 type AlertGenerator struct {
 	NewRelicService
 }
 
-func (g *AlertGenerator) createAlertChannelResources(client *newrelic.Client) error {
-	alertChannels, err := client.ListAlertChannels()
+func (g *AlertGenerator) createAlertChannelResources(client *newrelic.NewRelic) error {
+	alertChannels, err := client.Alerts.ListChannels()
 	if err != nil {
 		return err
 	}
 
 	for _, channel := range alertChannels {
-		g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
+		g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
 			fmt.Sprintf("%d", channel.ID),
 			fmt.Sprintf("%s-%d", normalizeResourceName(channel.Name), channel.ID),
 			"newrelic_alert_channel",
@@ -43,20 +44,20 @@ func (g *AlertGenerator) createAlertChannelResources(client *newrelic.Client) er
 	return nil
 }
 
-func (g *AlertGenerator) createAlertConditionResources(client *newrelic.Client) error {
-	alertPolicies, err := client.ListAlertPolicies()
+func (g *AlertGenerator) createAlertConditionResources(client *newrelic.NewRelic) error {
+	alertPolicies, err := client.Alerts.ListPolicies(nil)
 	if err != nil {
 		return err
 	}
 
 	for _, alertPolicy := range alertPolicies {
-		alertConditions, err := client.ListAlertConditions(alertPolicy.ID)
+		alertConditions, err := client.Alerts.ListConditions(alertPolicy.ID)
 		if err != nil {
 			return err
 		}
 
 		for _, alertCondition := range alertConditions {
-			g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
+			g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
 				fmt.Sprintf("%d:%d", alertPolicy.ID, alertCondition.ID),
 				fmt.Sprintf("%s-%d", normalizeResourceName(alertCondition.Name), alertCondition.ID),
 				"newrelic_alert_condition",
@@ -67,14 +68,38 @@ func (g *AlertGenerator) createAlertConditionResources(client *newrelic.Client) 
 	return nil
 }
 
-func (g *AlertGenerator) createAlertPolicyResources(client *newrelic.Client) error {
-	alertPolicies, err := client.ListAlertPolicies()
+func (g *AlertGenerator) createAlertNrqlConditionResources(client *newrelic.NewRelic) error {
+	alertPolicies, err := client.Alerts.ListPolicies(nil)
 	if err != nil {
 		return err
 	}
 
 	for _, alertPolicy := range alertPolicies {
-		g.Resources = append(g.Resources, terraform_utils.NewSimpleResource(
+		nrqlConditions, err := client.Alerts.ListNrqlConditions(alertPolicy.ID)
+		if err != nil {
+			return err
+		}
+
+		for _, nrqlCondition := range nrqlConditions {
+			g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
+				fmt.Sprintf("%d:%d", alertPolicy.ID, nrqlCondition.ID),
+				fmt.Sprintf("%s-%d", normalizeResourceName(nrqlCondition.Name), nrqlCondition.ID),
+				"newrelic_nrql_alert_condition",
+				g.ProviderName,
+				[]string{}))
+		}
+	}
+	return nil
+}
+
+func (g *AlertGenerator) createAlertPolicyResources(client *newrelic.NewRelic) error {
+	alertPolicies, err := client.Alerts.ListPolicies(nil)
+	if err != nil {
+		return err
+	}
+
+	for _, alertPolicy := range alertPolicies {
+		g.Resources = append(g.Resources, terraformutils.NewSimpleResource(
 			fmt.Sprintf("%d", alertPolicy.ID),
 			fmt.Sprintf("%s-%d", normalizeResourceName(alertPolicy.Name), alertPolicy.ID),
 			"newrelic_alert_policy",
@@ -91,9 +116,10 @@ func (g *AlertGenerator) InitResources() error {
 		return err
 	}
 
-	funcs := []func(*newrelic.Client) error{
+	funcs := []func(*newrelic.NewRelic) error{
 		g.createAlertChannelResources,
 		g.createAlertConditionResources,
+		g.createAlertNrqlConditionResources,
 		g.createAlertPolicyResources,
 	}
 

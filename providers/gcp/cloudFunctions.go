@@ -22,35 +22,33 @@ import (
 	"google.golang.org/api/cloudfunctions/v1"
 	"google.golang.org/api/compute/v1"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 var cloudFunctionsAllowEmptyValues = []string{""}
-
-var cloudFunctionsAdditionalFields = map[string]string{}
 
 type CloudFunctionsGenerator struct {
 	GCPService
 }
 
 // Run on CloudFunctionsList and create for each TerraformResource
-func (g CloudFunctionsGenerator) createResources(functionsList *cloudfunctions.ProjectsLocationsFunctionsListCall, ctx context.Context) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g CloudFunctionsGenerator) createResources(ctx context.Context, functionsList *cloudfunctions.ProjectsLocationsFunctionsListCall) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := functionsList.Pages(ctx, func(page *cloudfunctions.ListFunctionsResponse) error {
 		for _, functions := range page.Functions {
 			t := strings.Split(functions.Name, "/")
 			name := t[len(t)-1]
-			resources = append(resources, terraform_utils.NewSimpleResource(
+			resources = append(resources, terraformutils.NewSimpleResource(
 				g.GetArgs()["project"].(string)+"/"+g.GetArgs()["region"].(compute.Region).Name+"/"+name,
 				g.GetArgs()["region"].(compute.Region).Name+"_"+name,
 				"google_cloudfunctions_function",
-				"google",
+				g.ProviderName,
 				cloudFunctionsAllowEmptyValues,
 			))
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
@@ -62,12 +60,11 @@ func (g *CloudFunctionsGenerator) InitResources() error {
 	ctx := context.Background()
 	cloudfunctionsService, err := cloudfunctions.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	functionsList := cloudfunctionsService.Projects.Locations.Functions.List("projects/" + g.GetArgs()["project"].(string) + "/locations/" + g.GetArgs()["region"].(compute.Region).Name)
 
-	g.Resources = g.createResources(functionsList, ctx)
+	g.Resources = g.createResources(ctx, functionsList)
 	return nil
-
 }

@@ -15,9 +15,10 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kinesis"
+	"context"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 )
 
 var kinesisAllowEmptyValues = []string{"tags."}
@@ -26,11 +27,10 @@ type KinesisGenerator struct {
 	AWSService
 }
 
-func (g KinesisGenerator) createResources(streamNames []*string) []terraform_utils.Resource {
-	var resources []terraform_utils.Resource
-	for _, streamName := range streamNames {
-		resourceName := aws.StringValue(streamName)
-		resources = append(resources, terraform_utils.NewResource(
+func (g *KinesisGenerator) createResources(streamNames []string) []terraformutils.Resource {
+	var resources []terraformutils.Resource
+	for _, resourceName := range streamNames {
+		resources = append(resources, terraformutils.NewResource(
 			resourceName,
 			resourceName,
 			"aws_kinesis_stream",
@@ -43,12 +43,29 @@ func (g KinesisGenerator) createResources(streamNames []*string) []terraform_uti
 }
 
 func (g *KinesisGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := kinesis.New(sess)
-	output, err := svc.ListStreams(&kinesis.ListStreamsInput{})
-	if err != nil {
-		return err
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
 	}
-	g.Resources = g.createResources(output.StreamNames)
+	svc := kinesis.NewFromConfig(config)
+
+	var results *kinesis.ListStreamsOutput
+	var request = kinesis.ListStreamsInput{}
+	var err error
+
+	for results == nil || *results.HasMoreStreams {
+		results, err = svc.ListStreams(context.TODO(), &request)
+		if err != nil {
+			return err
+		}
+
+		g.Resources = append(g.Resources, g.createResources(results.StreamNames)...)
+
+		if len(results.StreamNames) > 0 {
+			request = kinesis.ListStreamsInput{
+				ExclusiveStartStreamName: &results.StreamNames[len(results.StreamNames)-1],
+			}
+		}
+	}
 	return nil
 }

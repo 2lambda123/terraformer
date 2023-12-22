@@ -19,9 +19,8 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	githubAPI "github.com/google/go-github/v25/github"
-	"golang.org/x/oauth2"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	githubAPI "github.com/google/go-github/v35/github"
 )
 
 type RepositoriesGenerator struct {
@@ -31,31 +30,30 @@ type RepositoriesGenerator struct {
 // Generate TerraformResources from github API,
 func (g *RepositoriesGenerator) InitResources() error {
 	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: g.GetArgs()["token"].(string)},
-	)
-	tc := oauth2.NewClient(ctx, ts)
-
-	client := githubAPI.NewClient(tc)
+	client, err := g.createClient()
+	if err != nil {
+		return err
+	}
 
 	opt := &githubAPI.RepositoryListByOrgOptions{
 		ListOptions: githubAPI.ListOptions{PerPage: 100},
 	}
-	//list all repositories for the authenticated user
+	// list all repositories for the authenticated user
 	for {
-		repos, resp, err := client.Repositories.ListByOrg(ctx, g.GetArgs()["organization"].(string), opt)
+		repos, resp, err := client.Repositories.ListByOrg(ctx, g.GetArgs()["owner"].(string), opt)
 		if err != nil {
 			log.Println(err)
 			return nil
 		}
 		for _, repo := range repos {
-			resource := terraform_utils.NewSimpleResource(
+			resource := terraformutils.NewSimpleResource(
 				repo.GetName(),
 				repo.GetName(),
 				"github_repository",
 				"github",
 				[]string{},
 			)
+			resource.SlowQueryRequired = true
 			g.Resources = append(g.Resources, resource)
 			g.Resources = append(g.Resources, g.createRepositoryWebhookResources(ctx, client, repo)...)
 			g.Resources = append(g.Resources, g.createRepositoryBranchProtectionResources(ctx, client, repo)...)
@@ -72,14 +70,14 @@ func (g *RepositoriesGenerator) InitResources() error {
 	return nil
 }
 
-func (g *RepositoriesGenerator) createRepositoryWebhookResources(ctx context.Context, client *githubAPI.Client, repo *githubAPI.Repository) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
-	hooks, _, err := client.Repositories.ListHooks(ctx, g.GetArgs()["organization"].(string), repo.GetName(), nil)
+func (g *RepositoriesGenerator) createRepositoryWebhookResources(ctx context.Context, client *githubAPI.Client, repo *githubAPI.Repository) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
+	hooks, _, err := client.Repositories.ListHooks(ctx, g.GetArgs()["owner"].(string), repo.GetName(), nil)
 	if err != nil {
 		log.Println(err)
 	}
 	for _, hook := range hooks {
-		resources = append(resources, terraform_utils.NewResource(
+		resources = append(resources, terraformutils.NewResource(
 			strconv.FormatInt(hook.GetID(), 10),
 			repo.GetName()+"_"+strconv.FormatInt(hook.GetID(), 10),
 			"github_repository_webhook",
@@ -94,15 +92,15 @@ func (g *RepositoriesGenerator) createRepositoryWebhookResources(ctx context.Con
 	return resources
 }
 
-func (g *RepositoriesGenerator) createRepositoryBranchProtectionResources(ctx context.Context, client *githubAPI.Client, repo *githubAPI.Repository) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
-	branches, _, err := client.Repositories.ListBranches(ctx, g.GetArgs()["organization"].(string), repo.GetName(), nil)
+func (g *RepositoriesGenerator) createRepositoryBranchProtectionResources(ctx context.Context, client *githubAPI.Client, repo *githubAPI.Repository) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
+	branches, _, err := client.Repositories.ListBranches(ctx, g.GetArgs()["owner"].(string), repo.GetName(), nil)
 	if err != nil {
 		log.Println(err)
 	}
 	for _, branch := range branches {
 		if branch.GetProtected() {
-			resources = append(resources, terraform_utils.NewSimpleResource(
+			resources = append(resources, terraformutils.NewSimpleResource(
 				repo.GetName()+":"+branch.GetName(),
 				repo.GetName()+"_"+branch.GetName(),
 				"github_branch_protection",
@@ -114,33 +112,32 @@ func (g *RepositoriesGenerator) createRepositoryBranchProtectionResources(ctx co
 	return resources
 }
 
-func (g *RepositoriesGenerator) createRepositoryCollaboratorResources(ctx context.Context, client *githubAPI.Client, repo *githubAPI.Repository) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
-	collaborators, _, err := client.Repositories.ListCollaborators(ctx, g.GetArgs()["organization"].(string), repo.GetName(), nil)
+func (g *RepositoriesGenerator) createRepositoryCollaboratorResources(ctx context.Context, client *githubAPI.Client, repo *githubAPI.Repository) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
+	collaborators, _, err := client.Repositories.ListCollaborators(ctx, g.GetArgs()["owner"].(string), repo.GetName(), nil)
 	if err != nil {
 		log.Println(err)
 	}
 	for _, collaborator := range collaborators {
-		resources = append(resources, terraform_utils.NewSimpleResource(
-			repo.GetName()+":"+collaborator.GetName(),
-			repo.GetName()+":"+collaborator.GetName(),
+		resources = append(resources, terraformutils.NewSimpleResource(
+			repo.GetName()+":"+collaborator.GetLogin(),
+			repo.GetName()+":"+collaborator.GetLogin(),
 			"github_repository_collaborator",
 			"github",
 			[]string{},
 		))
 	}
 	return resources
-
 }
 
-func (g *RepositoriesGenerator) createRepositoryDeployKeyResources(ctx context.Context, client *githubAPI.Client, repo *githubAPI.Repository) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
-	deployKeys, _, err := client.Repositories.ListKeys(ctx, g.GetArgs()["organization"].(string), repo.GetName(), nil)
+func (g *RepositoriesGenerator) createRepositoryDeployKeyResources(ctx context.Context, client *githubAPI.Client, repo *githubAPI.Repository) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
+	deployKeys, _, err := client.Repositories.ListKeys(ctx, g.GetArgs()["owner"].(string), repo.GetName(), nil)
 	if err != nil {
 		log.Println(err)
 	}
 	for _, key := range deployKeys {
-		resources = append(resources, terraform_utils.NewSimpleResource(
+		resources = append(resources, terraformutils.NewSimpleResource(
 			repo.GetName()+":"+strconv.FormatInt(key.GetID(), 10),
 			repo.GetName()+":"+key.GetTitle(),
 			"github_repository_deploy_key",

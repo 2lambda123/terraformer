@@ -19,7 +19,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
 	"google.golang.org/api/compute/v1"
 )
@@ -33,15 +33,15 @@ type UrlMapsGenerator struct {
 }
 
 // Run on urlMapsList and create for each TerraformResource
-func (g UrlMapsGenerator) createResources(ctx context.Context, urlMapsList *compute.UrlMapsListCall) []terraform_utils.Resource {
-	resources := []terraform_utils.Resource{}
+func (g UrlMapsGenerator) createResources(ctx context.Context, urlMapsList *compute.UrlMapsListCall) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
 	if err := urlMapsList.Pages(ctx, func(page *compute.UrlMapList) error {
 		for _, obj := range page.Items {
-			resources = append(resources, terraform_utils.NewResource(
+			resources = append(resources, terraformutils.NewResource(
 				obj.Name,
 				obj.Name,
 				"google_compute_url_map",
-				"google",
+				g.ProviderName,
 				map[string]string{
 					"name":    obj.Name,
 					"project": g.GetArgs()["project"].(string),
@@ -53,7 +53,7 @@ func (g UrlMapsGenerator) createResources(ctx context.Context, urlMapsList *comp
 		}
 		return nil
 	}); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
@@ -65,7 +65,7 @@ func (g *UrlMapsGenerator) InitResources() error {
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	urlMapsList := computeService.UrlMaps.List(g.GetArgs()["project"].(string))

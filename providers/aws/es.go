@@ -15,10 +15,10 @@
 package aws
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
-	"github.com/aws/aws-sdk-go/aws"
+	"context"
 
-	es "github.com/aws/aws-sdk-go/service/elasticsearchservice"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	es "github.com/aws/aws-sdk-go-v2/service/elasticsearchservice"
 )
 
 var esAllowEmptyValues = []string{"tags."}
@@ -28,27 +28,45 @@ type EsGenerator struct {
 }
 
 func (g *EsGenerator) InitResources() error {
-	sess := g.generateSession()
-	svc := es.New(sess)
+	config, e := g.generateConfig()
+	if e != nil {
+		return e
+	}
+	svc := es.NewFromConfig(config)
 
-	domainNames, err := svc.ListDomainNames(&es.ListDomainNamesInput{})
+	domainNames, err := svc.ListDomainNames(context.TODO(), &es.ListDomainNamesInput{})
 	if err != nil {
 		return err
 	}
 
 	for _, domainName := range domainNames.DomainNames {
-		g.Resources = append(g.Resources, terraform_utils.NewResource(
-			aws.StringValue(domainName.DomainName),
-			aws.StringValue(domainName.DomainName),
+		g.Resources = append(g.Resources, terraformutils.NewResource(
+			StringValue(domainName.DomainName),
+			StringValue(domainName.DomainName),
 			"aws_elasticsearch_domain",
 			"aws",
 			map[string]string{
-				"domain_name": aws.StringValue(domainName.DomainName),
+				"domain_name": StringValue(domainName.DomainName),
 			},
 			esAllowEmptyValues,
 			map[string]interface{}{},
 		))
 	}
 
+	return nil
+}
+
+func (g *EsGenerator) PostConvertHook() error {
+	for _, r := range g.Resources {
+		if r.InstanceInfo.Type != "aws_elasticsearch_domain" {
+			continue
+		}
+		if r.InstanceState.Attributes["cognito_options.0.enabled"] == "false" {
+			delete(r.Item, "cognito_options")
+		}
+		if r.InstanceState.Attributes["cluster_config.0.warm_count"] == "0" {
+			delete(r.Item["cluster_config"].([]interface{})[0].(map[string]interface{}), "warm_count")
+		}
+	}
 	return nil
 }

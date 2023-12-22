@@ -15,16 +15,17 @@
 package heroku
 
 import (
-	"github.com/GoogleCloudPlatform/terraformer/terraform_utils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	heroku "github.com/heroku/heroku-go/v5"
 )
 
-type HerokuService struct {
-	terraform_utils.Service
+type HerokuService struct { //nolint
+	terraformutils.Service
 }
 
 func (s *HerokuService) generateService() *heroku.Service {
 	heroku.DefaultTransport.Username = s.Args["email"].(string)
 	heroku.DefaultTransport.Password = s.Args["api_key"].(string)
+	heroku.DefaultTransport.Debug = s.Verbose
 	return heroku.NewService(heroku.DefaultClient)
 }
