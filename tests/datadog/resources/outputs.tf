@@ -30,4 +30,3 @@ output "datadog_user--user_example" {
 output "datadog_user--user_example_two" {
   value = datadog_user.user_example_two.id
 }
-
