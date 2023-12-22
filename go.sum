@@ -331,8 +331,8 @@ github.com/aws/aws-sdk-go-v2/service/datapipeline v1.13.15 h1:41ZA75+YHv8hyNrBSy
 github.com/aws/aws-sdk-go-v2/service/datapipeline v1.13.15/go.mod h1:g6JDbqR8/dxCyAGU2xb3ZQ23oAa5czV/QIqdxLeX52c=
 github.com/aws/aws-sdk-go-v2/service/devicefarm v1.13.3 h1:fYkhLvCtT+Xn3ZWVaoE1v1lehBYsEi4ZmKp75rtELV0=
 github.com/aws/aws-sdk-go-v2/service/devicefarm v1.13.3/go.mod h1:YgtRXs9wd1qLZXmVMseXFCDjkQpmHoe4lmJtZIiyh7k=
-github.com/aws/aws-sdk-go-v2/service/docdb v1.18.1 h1:9ZqAy/lN0nyIIN8QxTgCCo3BcE+9JvryOZfrzp5xCJk=
-github.com/aws/aws-sdk-go-v2/service/docdb v1.18.1/go.mod h1:77akGGfFx4oiJdbKdCflCVg5kQZDuGQ8Rb6ko7BNv90=
+github.com/aws/aws-sdk-go-v2/service/docdb v1.29.5 h1:txsajy47TIyoL7/BQt0VwqmzLPIsfAT/RWI9iD4q5vU=
+github.com/aws/aws-sdk-go-v2/service/docdb v1.29.5/go.mod h1:8d1RpdlgxFU6VO2aWru1ckR0Vsm4EgqCZgOamw5OHpw=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.2.1 h1:NnYXRukLvkiTnNyZHCCQcZaoWJSeE5Y7tCVPgvTyWfw=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.2.1/go.mod h1:WqAbIrpO0PSa3AIDxMG12aPPN4D1u99rOFdEfSM/KgY=
 github.com/aws/aws-sdk-go-v2/service/ec2 v1.3.0 h1:y82WbYudKuiWx0KuKQheqTQ4RIF8ZHoHvS/rD8HCYCc=
@@ -370,7 +370,6 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 h1:/b31bi3
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4/go.mod h1:2aGXHFmbInwgP9ZfpmdIfOELL79zhdNYNmReK8qDfdQ=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.0.5/go.mod h1:MW0O/RpmVpS6MWKn6W03XEJmqXlG7+d3iaYLzkd2fAc=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.0/go.mod h1:R31ot6BgESRCIoxwfKtIHzZMo/vsZn2un81g9BJ4nmo=
-github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.4/go.mod h1:uKkN7qmSIsNJVyMtxNQoCEYMvFEXbOg9fwCJPdfp2u8=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.9 h1:Nf2sHxjMJR8CSImIVCONRi4g0Su3J+TSTbS7G0pUeMU=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.9/go.mod h1:idky4TER38YIjr2cADF1/ugFMKvZV7p//pVeV5LZbF0=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.2.1 h1:wCzfVBrF1QRQFacZn1ywE/o2p92FzfpDNI2aCpIv+sY=
