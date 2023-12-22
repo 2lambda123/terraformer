@@ -10,21 +10,21 @@ Example:
 
 List of supported Mackerel services:
 
-*   `alert_group_setting`
-    * `mackerel_alert_group_setting`
-*   `aws_integration`
-    * `mackerel_aws_integration`
-        * Sensitive field `secret_key` is not generated and needs to be manually set
-        * Sensitive field `external_id` is not generated and needs to be manually set
-*   `channel`
-    * `mackerel_channel`
-*   `downtime`
-    * `mackerel_downtime`
-*   `monitor`
-    * `mackerel_monitor`
-*   `notification_group`
-    * `mackerel_notification_group`
-*   `role`
-    * `mackerel_role`
-*   `service`
-    * `mackerel_service`
+- `alert_group_setting`
+  - `mackerel_alert_group_setting`
+- `aws_integration`
+  - `mackerel_aws_integration`
+    - Sensitive field `secret_key` is not generated and needs to be manually set
+    - Sensitive field `external_id` is not generated and needs to be manually set
+- `channel`
+  - `mackerel_channel`
+- `downtime`
+  - `mackerel_downtime`
+- `monitor`
+  - `mackerel_monitor`
+- `notification_group`
+  - `mackerel_notification_group`
+- `role`
+  - `mackerel_role`
+- `service`
+  - `mackerel_service`

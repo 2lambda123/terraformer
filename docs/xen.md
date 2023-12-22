@@ -12,5 +12,5 @@ XOA_URL=ws://your-xenorchestra-domain XOA_USER=username XOA_PASSWORD=password te
 
 List of supported xenorchestra resources:
 
-* `xenorchestra_acl`
-* `xenorchestra_resource_set`
+- `xenorchestra_acl`
+- `xenorchestra_resource_set`

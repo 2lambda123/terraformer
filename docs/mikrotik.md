@@ -15,4 +15,4 @@ MIKROTIK_HOST=router-hostname:8728 MIKROTIK_USER=username MIKROTIK_PASSWORD=pass
 
 List of supported mikrotik resources:
 
-* `mikrotik_dhcp_lease`
+- `mikrotik_dhcp_lease`

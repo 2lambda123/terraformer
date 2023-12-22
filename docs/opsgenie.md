@@ -8,7 +8,7 @@ Example:
 
 List of supported Opsgenie services:
 
-*   `team`
-    * `opsgenie_team`
-*   `user`
-    * `opsgenie_user`
+- `team`
+  - `opsgenie_team`
+- `user`
+  - `opsgenie_user`

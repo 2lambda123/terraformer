@@ -13,17 +13,17 @@ Example:
 
 All RabbitMQ resources that are currently supported by the RabbitMQ provider, are also supported by this module. Here is the list of resources which are currently supported by RabbitMQ provider v.1.1.0:
 
-*   `bindings`
-    * `rabbitmq_binding`
-*   `exchanges`
-    * `rabbitmq_exchange`
-*   `permissions`
-    * `rabbitmq_permissions`
-*   `policies`
-    * `rabbitmq_policy`
-*   `queues`
-    * `rabbitmq_queue`
-*   `users`
-    * `rabbitmq_user`
-*   `vhosts`
-    * `rabbitmq_vhost`
+- `bindings`
+  - `rabbitmq_binding`
+- `exchanges`
+  - `rabbitmq_exchange`
+- `permissions`
+  - `rabbitmq_permissions`
+- `policies`
+  - `rabbitmq_policy`
+- `queues`
+  - `rabbitmq_queue`
+- `users`
+  - `rabbitmq_user`
+- `vhosts`
+  - `rabbitmq_vhost`

@@ -4,7 +4,7 @@ Supports access via [Personal Access Token](https://registry.terraform.io/provid
 
 ## Example
 
-``` sh
+```sh
 export AZDO_ORG_SERVICE_URL="https://dev.azure.com/<Your Org Name>"
 export AZDO_PERSONAL_ACCESS_TOKEN="<Personal Access Token>"
 
@@ -14,12 +14,12 @@ export AZDO_PERSONAL_ACCESS_TOKEN="<Personal Access Token>"
 
 ## List of supported Azure DevOps resources
 
-* `project`
-  * `azuredevops_project`
-* `group`
-  * `azuredevops_group`
-* `git_repository`
-  * `azuredevops_git_repository`
+- `project`
+  - `azuredevops_project`
+- `group`
+  - `azuredevops_group`
+- `git_repository`
+  - `azuredevops_git_repository`
 
 ## Notes
 

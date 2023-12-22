@@ -9,16 +9,16 @@ export HONEYCOMB_API_KEY=MYAPIKEY
 
 List of supported Honeycomb resources:
 
-* `board`
-  * `honeycombio_board`
-  * `honeycombio_query`
-  * `honeycombio_query_annotation`
-* `derived_column`
-  * `honeycombio_derived_column`
-* `trigger`
-  * `honeycombio_trigger`
-  * `honeycombio_query`
-* `slo`
-  * `honeycombio_slo`
-  * `honeycombio_burn_alert`
-  * `honeycombio_derived_column`
+- `board`
+  - `honeycombio_board`
+  - `honeycombio_query`
+  - `honeycombio_query_annotation`
+- `derived_column`
+  - `honeycombio_derived_column`
+- `trigger`
+  - `honeycombio_trigger`
+  - `honeycombio_query`
+- `slo`
+  - `honeycombio_slo`
+  - `honeycombio_burn_alert`
+  - `honeycombio_derived_column`
