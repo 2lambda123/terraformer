@@ -5,9 +5,7 @@
   "lineage": "11c0e8e7-bc2d-8f4c-b40b-25f62ece8666",
   "modules": [
     {
-      "path": [
-        "root"
-      ],
+      "path": ["root"],
       "outputs": {},
       "resources": {
         "google_compute_firewall.resource-idA": {
