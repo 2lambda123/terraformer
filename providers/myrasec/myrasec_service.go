@@ -9,16 +9,12 @@ import (
 	mgo "github.com/Myra-Security-GmbH/myrasec-go/v2"
 )
 
-//
 // MyrasecService ...
-//
 type MyrasecService struct {
 	terraformutils.Service
 }
 
-//
 // initializeAPI ...
-//
 func (s *MyrasecService) initializeAPI() (*mgo.API, error) {
 	apiKey := os.Getenv("MYRASEC_API_KEY")
 	apiSecret := os.Getenv("MYRASEC_API_SECRET")
