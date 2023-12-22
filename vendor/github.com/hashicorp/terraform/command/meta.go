@@ -14,16 +14,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-svchost/disco"
 	"github.com/hashicorp/terraform/addrs"
 	"github.com/hashicorp/terraform/backend"
 	"github.com/hashicorp/terraform/backend/local"
 	"github.com/hashicorp/terraform/command/format"
+	"github.com/hashicorp/terraform/command/webbrowser"
 	"github.com/hashicorp/terraform/configs/configload"
 	"github.com/hashicorp/terraform/helper/experiment"
 	"github.com/hashicorp/terraform/helper/wrappedstreams"
 	"github.com/hashicorp/terraform/providers"
 	"github.com/hashicorp/terraform/provisioners"
-	"github.com/hashicorp/terraform/svchost/disco"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/terraform/tfdiags"
 	"github.com/mitchellh/cli"
@@ -61,6 +62,14 @@ type Meta struct {
 	// the specific commands being run.
 	RunningInAutomation bool
 
+	// CLIConfigDir is the directory from which CLI configuration files were
+	// read by the caller and the directory where any changes to CLI
+	// configuration files by commands should be made.
+	//
+	// If this is empty then no configuration directory is available and
+	// commands which require one cannot proceed.
+	CLIConfigDir string
+
 	// PluginCacheDir, if non-empty, enables caching of downloaded plugins
 	// into the given directory.
 	PluginCacheDir string
@@ -69,6 +78,10 @@ type Meta struct {
 	// DataDir method for situations where the local .terraform/ directory
 	// is not suitable, e.g. because of a read-only filesystem.
 	OverrideDataDir string
+
+	// BrowserLauncher is used by commands that need to open a URL in a
+	// web browser.
+	BrowserLauncher webbrowser.Launcher
 
 	// When this channel is closed, the command will be cancelled.
 	ShutdownCh <-chan struct{}
@@ -229,8 +242,6 @@ func (m *Meta) InputMode() terraform.InputMode {
 
 	var mode terraform.InputMode
 	mode |= terraform.InputModeProvider
-	mode |= terraform.InputModeVar
-	mode |= terraform.InputModeVarUnset
 
 	return mode
 }
@@ -468,6 +479,9 @@ func (m *Meta) showDiagnostics(vals ...interface{}) {
 	var diags tfdiags.Diagnostics
 	diags = diags.Append(vals...)
 	diags.Sort()
+
+	// Since warning messages are generally competing
+	diags = diags.ConsolidateWarnings()
 
 	for _, diag := range diags {
 		// TODO: Actually measure the terminal width and pass it here.

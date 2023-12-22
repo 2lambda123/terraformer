@@ -3,20 +3,20 @@ module github.com/GoogleCloudPlatform/terraformer
 go 1.13
 
 require (
-	cloud.google.com/go v0.36.0
-	github.com/Azure/azure-sdk-for-go v34.0.0+incompatible
-	github.com/Azure/go-autorest v13.0.2+incompatible
-	github.com/Azure/go-autorest/autorest v0.9.1 // indirect
+	cloud.google.com/go/iam v1.1.3
+	cloud.google.com/go/logging v1.9.0
+	cloud.google.com/go/monitoring v1.16.1
+	cloud.google.com/go/storage v1.30.1
+	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
+	github.com/Azure/go-autorest v13.0.2+incompatible // indirect
 	github.com/Azure/go-autorest/autorest/azure/auth v0.3.0
-	github.com/Azure/go-autorest/autorest/to v0.3.0 // indirect
-	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
-	github.com/aws/aws-sdk-go v1.22.0
+	github.com/aws/aws-sdk-go v1.25.3
 	github.com/cloudflare/cloudflare-go v0.9.4
 	github.com/coreos/go-systemd v0.0.0-20181031085051-9002847aa142 // indirect
 	github.com/dollarshaveclub/new-relic-synthetics-go v0.0.0-20170605224734-4dc3dd6ae884
-	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
 	github.com/google/go-github/v25 v25.0.2
 	github.com/google/gofuzz v1.0.0 // indirect
+	github.com/googleapis/gax-go v2.0.0+incompatible // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190427020117-60507118a582
 	github.com/hashicorp/consul v1.4.0 // indirect
@@ -24,10 +24,10 @@ require (
 	github.com/hashicorp/go-plugin v1.0.1-0.20190610192547-a1bc61569a26
 	github.com/hashicorp/hcl v1.0.1-0.20190611123218-cf7d376da96d
 	github.com/hashicorp/hcl2 v0.0.0-20190821123243-0c888d1241f6
-	github.com/hashicorp/terraform v0.12.8
+	github.com/hashicorp/terraform v0.12.17
 	github.com/heroku/heroku-go/v5 v5.1.0
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c // indirect
-	github.com/iancoleman/strcase v0.0.0-20190422225806-e506e3ef7365
+	github.com/iancoleman/strcase v0.2.0
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jonboydell/logzio_client v0.0.0-20190726085421-c93d6b149c1e
@@ -39,19 +39,19 @@ require (
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/packer-community/winrmcp v0.0.0-20180921211025-c76d91c1e7db // indirect
 	github.com/paultyng/go-newrelic v3.1.0+incompatible
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3
 	github.com/terraform-providers/terraform-provider-openstack v1.18.0 // indirect
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/ugorji/go v1.1.2-0.20180728093225-eeb0478a81ae // indirect
-	github.com/unknwon/com v0.0.0-20181010210213-41959bdd855f // indirect
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca // indirect
-	github.com/zclconf/go-cty v1.0.1-0.20190708163926-19588f92a98f
+	github.com/zclconf/go-cty v1.1.0
 	github.com/zorkian/go-datadog-api v2.24.0+incompatible
-	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
-	google.golang.org/api v0.5.1-0.20190510010909-bbbc0e98e3cc
-	google.golang.org/genproto v0.0.0-20190307195333-5fe7a883aa19
+	golang.org/x/oauth2 v0.13.0
+	google.golang.org/api v0.149.0
+	google.golang.org/genproto v0.0.0-20231016165738-49dd2c1f3d0b
+	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/resty.v0 v0.4.1 // indirect
 	k8s.io/api v0.0.0-20190116205037-c89978d5f86d // indirect
 	k8s.io/apimachinery v0.0.0-20190116203031-d49e237a2683
