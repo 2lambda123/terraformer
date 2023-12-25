@@ -13,7 +13,7 @@ require (
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20220624043500-d538cb4fd9be
 	github.com/IBM/go-sdk-core/v3 v3.3.1
 	github.com/IBM/go-sdk-core/v4 v4.9.0
-	github.com/IBM/ibm-cos-sdk-go v1.5.0
+	github.com/IBM/ibm-cos-sdk-go v1.10.1
 	github.com/IBM/keyprotect-go-client v0.8.1
 	github.com/IBM/networking-go-sdk v0.30.0
 	github.com/IBM/platform-services-go-sdk v0.26.1
@@ -300,7 +300,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.0.0-20210201082850-366fbb520750 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
+	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
