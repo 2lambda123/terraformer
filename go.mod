@@ -43,7 +43,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.2.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.18.2
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchevents v1.2.0
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.2.3
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.30.1
 	github.com/aws/aws-sdk-go-v2/service/codebuild v1.2.1
 	github.com/aws/aws-sdk-go-v2/service/codecommit v1.1.3
 	github.com/aws/aws-sdk-go-v2/service/codedeploy v1.2.1
@@ -359,6 +359,7 @@ require (
 	github.com/Myra-Security-GmbH/signature v1.0.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.5.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.5 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/emicklei/go-restful v2.16.0+incompatible // indirect
