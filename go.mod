@@ -98,7 +98,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/wafregional v1.12.3
 	github.com/aws/aws-sdk-go-v2/service/wafv2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/service/workspaces v1.2.1
-	github.com/aws/aws-sdk-go-v2/service/xray v1.2.1
+	github.com/aws/aws-sdk-go-v2/service/xray v1.23.6
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cloudflare/cloudflare-go v0.13.6
 	github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21 // indirect
