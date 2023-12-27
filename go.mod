@@ -317,7 +317,7 @@ require (
 	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
-	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
+	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	golang.org/x/tools v0.6.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -346,7 +346,7 @@ require (
 	cloud.google.com/go/iam v1.1.3
 	cloud.google.com/go/monitoring v1.16.1
 	github.com/DataDog/datadog-api-client-go/v2 v2.1.0
-	github.com/Myra-Security-GmbH/myrasec-go/v2 v2.19.0
+	github.com/Myra-Security-GmbH/myrasec-go/v2 v2.32.0
 	github.com/manicminer/hamilton v0.44.0
 	gopkg.in/ns1/ns1-go.v2 v2.6.5
 )
