@@ -54,7 +54,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/datapipeline v1.13.15
 	github.com/aws/aws-sdk-go-v2/service/devicefarm v1.13.3
 	github.com/aws/aws-sdk-go-v2/service/docdb v1.29.5
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.2.1
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.26.7
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.3.0
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.17.16
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.13.8
@@ -360,6 +360,7 @@ require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.5.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.8.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.5 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/emicklei/go-restful v2.16.0+incompatible // indirect
