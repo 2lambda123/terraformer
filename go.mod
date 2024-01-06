@@ -50,7 +50,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/codepipeline v1.13.3
 	github.com/aws/aws-sdk-go-v2/service/cognitoidentity v1.2.1
 	github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider v1.2.1
-	github.com/aws/aws-sdk-go-v2/service/configservice v1.25.4
+	github.com/aws/aws-sdk-go-v2/service/configservice v1.43.6
 	github.com/aws/aws-sdk-go-v2/service/datapipeline v1.13.15
 	github.com/aws/aws-sdk-go-v2/service/devicefarm v1.13.3
 	github.com/aws/aws-sdk-go-v2/service/docdb v1.29.5
