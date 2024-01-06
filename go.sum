@@ -131,8 +131,8 @@ cloud.google.com/go/memcache v1.4.0/go.mod h1:rTOfiGZtJX1AaFUrOgsMHX5kAzaTQ8azHi
 cloud.google.com/go/memcache v1.5.0/go.mod h1:dk3fCK7dVo0cUU2c36jKb4VqKPS22BTkf81Xq617aWM=
 cloud.google.com/go/metastore v1.5.0/go.mod h1:2ZNrDcQwghfdtCwJ33nM0+GrBGlVuh8rakL3vdPY3XY=
 cloud.google.com/go/metastore v1.6.0/go.mod h1:6cyQTls8CWXzk45G55x57DVQ9gWg7RiH65+YgPsNh9s=
-cloud.google.com/go/monitoring v1.16.1 h1:CTklIuUkS5nCricGojPwdkSgPsCTX2HmYTxFDg+UvpU=
-cloud.google.com/go/monitoring v1.16.1/go.mod h1:6HsxddR+3y9j+o/cMJH6q/KJ/CBTvM/38L/1m7bTRJ4=
+cloud.google.com/go/monitoring v1.17.0 h1:blrdvF0MkPPivSO041ihul7rFMhXdVp8Uq7F59DKXTU=
+cloud.google.com/go/monitoring v1.17.0/go.mod h1:KwSsX5+8PnXv5NJnICZzW2R8pWTis8ypC4zmdRD63Tw=
 cloud.google.com/go/networkconnectivity v1.4.0/go.mod h1:nOl7YL8odKyAOtzNX73/M5/mGZgqqMeryi6UPZTk/rA=
 cloud.google.com/go/networkconnectivity v1.5.0/go.mod h1:3GzqJx7uhtlM3kln0+x5wyFvuVH1pIBJjhCpjzSt75o=
 cloud.google.com/go/networksecurity v0.5.0/go.mod h1:xS6fOCoqpVC5zx15Z/MqkfDwH4+m/61A3ODiDV1xmiQ=
