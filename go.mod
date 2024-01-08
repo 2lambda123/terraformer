@@ -115,7 +115,7 @@ require (
 	github.com/fastly/go-fastly/v6 v6.3.2
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gocql/gocql v0.0.0-20210707082121-9a3953d1826d // indirect
-	github.com/google/go-github/v35 v35.1.0
+	github.com/google/go-github/v35 v35.3.0
 	github.com/gophercloud/gophercloud v1.0.0
 	github.com/grafana/grafana-api-golang-client v0.0.0-20210218192924-9ccd2365d2a6
 	github.com/hashicorp/go-azure-helpers v0.36.0
