@@ -16,7 +16,7 @@ require (
 	github.com/IBM/ibm-cos-sdk-go v1.10.1
 	github.com/IBM/keyprotect-go-client v0.8.1
 	github.com/IBM/networking-go-sdk v0.30.0
-	github.com/IBM/platform-services-go-sdk v0.26.1
+	github.com/IBM/platform-services-go-sdk v0.56.0
 	github.com/IBM/vpc-go-sdk v0.4.1
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/OctopusDeploy/go-octopusdeploy v1.6.0
@@ -197,7 +197,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/BurntSushi/toml v1.1.0 // indirect
-	github.com/IBM/go-sdk-core/v5 v5.10.1 // indirect
+	github.com/IBM/go-sdk-core/v5 v5.14.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
@@ -206,7 +206,7 @@ require (
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/appscode/go-querystring v0.0.0-20170504095604-0126cfb3f1dc // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
-	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef // indirect
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.10 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.10 // indirect
@@ -232,13 +232,12 @@ require (
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/logr v1.2.0 // indirect
-	github.com/go-openapi/errors v0.19.8 // indirect
-	github.com/go-openapi/strfmt v0.21.2 // indirect
-	github.com/go-playground/locales v0.14.0 // indirect
-	github.com/go-playground/universal-translator v0.18.0 // indirect
+	github.com/go-openapi/errors v0.20.3 // indirect
+	github.com/go-openapi/strfmt v0.21.5 // indirect
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.1.1-0.20191201195748-d7b97669fe48 // indirect
 	github.com/go-routeros/routeros v0.0.0-20210123142807-2a44d57c6730 // indirect
-	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
@@ -253,7 +252,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-getter v1.7.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.1 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.2 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.0 // indirect
@@ -270,7 +269,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/klauspost/compress v1.15.11 // indirect
-	github.com/leodido/go-urn v1.2.1 // indirect
+	github.com/leodido/go-urn v1.2.3 // indirect
 	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-ieproxy v0.0.0-20190702010315-6dee0af9227d // indirect
@@ -306,10 +305,10 @@ require (
 	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
 	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
-	github.com/xdg-go/scram v1.0.2 // indirect
-	github.com/xdg-go/stringprep v1.0.2 // indirect
+	github.com/xdg-go/scram v1.1.1 // indirect
+	github.com/xdg-go/stringprep v1.0.3 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
-	go.mongodb.org/mongo-driver v1.7.5 // indirect
+	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
@@ -367,6 +366,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.14 // indirect
+	github.com/go-playground/validator/v10 v10.13.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
@@ -374,6 +374,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/manicminer/hamilton-autorest v0.2.0 // indirect
+	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	golang.org/x/tools/cmd/cover v0.1.0-deprecated // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
