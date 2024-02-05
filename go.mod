@@ -53,7 +53,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/configservice v1.44.0
 	github.com/aws/aws-sdk-go-v2/service/datapipeline v1.19.6
 	github.com/aws/aws-sdk-go-v2/service/devicefarm v1.13.3
-	github.com/aws/aws-sdk-go-v2/service/docdb v1.29.5
+	github.com/aws/aws-sdk-go-v2/service/docdb v1.30.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.26.7
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.3.0
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.17.16
@@ -212,7 +212,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.10 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.2.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/redshift v1.10.0
 	github.com/aws/aws-sdk-go-v2/service/sso v1.18.5 // indirect
