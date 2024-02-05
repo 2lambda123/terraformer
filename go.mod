@@ -213,7 +213,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.2.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/redshift v1.10.0
+	github.com/aws/aws-sdk-go-v2/service/redshift v1.39.8
 	github.com/aws/aws-sdk-go-v2/service/sso v1.18.5 // indirect
 	github.com/aws/smithy-go v1.19.0 // indirect
 	github.com/beevik/etree v1.1.0 // indirect
