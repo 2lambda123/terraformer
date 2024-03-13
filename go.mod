@@ -30,7 +30,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.26.2
 	github.com/aws/aws-sdk-go-v2/credentials v1.16.13
 	github.com/aws/aws-sdk-go-v2/service/accessanalyzer v1.2.0
-	github.com/aws/aws-sdk-go-v2/service/acm v1.22.6
+	github.com/aws/aws-sdk-go-v2/service/acm v1.25.2
 	github.com/aws/aws-sdk-go-v2/service/apigateway v1.21.7
 	github.com/aws/aws-sdk-go-v2/service/appsync v1.14.4
 	github.com/aws/aws-sdk-go-v2/service/autoscaling v1.3.1
