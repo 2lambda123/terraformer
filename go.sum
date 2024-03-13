@@ -494,8 +494,8 @@ github.com/aws/aws-sdk-go-v2/service/elasticsearchservice v1.15.4 h1:nQwgZmm9Jo6
 github.com/aws/aws-sdk-go-v2/service/elasticsearchservice v1.15.4/go.mod h1:OQwk8I8xS7CEzQXvNlT5B/enxPMFw15wSsZUKuO+c64=
 github.com/aws/aws-sdk-go-v2/service/emr v1.2.1 h1:YHcDnfSGq/DfLqIU+qf1uZ3tXVr5kythLVet2zWQZFY=
 github.com/aws/aws-sdk-go-v2/service/emr v1.2.1/go.mod h1:cAGYVhsN+3rqjZb0TO8FaNtfV++ItE3vWiqzQTAkQ1Q=
-github.com/aws/aws-sdk-go-v2/service/firehose v1.2.1 h1:XG4P2vpReYdY920Pf0pze6O7h7SFUkyIRVNYHNWtA2Y=
-github.com/aws/aws-sdk-go-v2/service/firehose v1.2.1/go.mod h1:Zt1lhxCqEWgjYOtpQp1zNg+KGz5GBrJ3Kh2CY3tuAM0=
+github.com/aws/aws-sdk-go-v2/service/firehose v1.24.0 h1:U3F5oeq3Lp1jv9ebLHNr1OSBjCP7qwIOuj+tNqJOuzw=
+github.com/aws/aws-sdk-go-v2/service/firehose v1.24.0/go.mod h1:vHumFD15AwENJSM3SsWzcPpMK24s/7vGN1Xp5rLguz0=
 github.com/aws/aws-sdk-go-v2/service/glue v1.3.0 h1:xnSuV0C7FGfe9+/GJ/2KOTFD3WMXtLdk8gZzxuuuIRM=
 github.com/aws/aws-sdk-go-v2/service/glue v1.3.0/go.mod h1:ITzMOyWhffmh06X4DxvN85ww8Ppt0uZGh8Qcty22/yQ=
 github.com/aws/aws-sdk-go-v2/service/iam v1.3.0 h1:V95YLxbxLGlTcFR0KMMSZEaudIxYCAhycSGcO7/Favs=
